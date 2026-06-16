@@ -243,6 +243,44 @@ code(
 )
 
 md(
+    "## 7. A/B 청취 데모\n"
+    "\n"
+    "핑크노이즈를 방에 통과시킨 **보정 전**과, DDSP EQ로 사전 보정한 뒤 통과시킨\n"
+    "**보정 후**를 비교한다. 스펙트로그램에서 에너지가 더 고르게 펴지고, 아래 플레이어로\n"
+    "직접 들어볼 수 있다 (WAV는 `assets/audio/`). 잔향은 방 고유 특성이라 남고, 달라지는\n"
+    "것은 주파수 밸런스다."
+)
+
+code(
+    "import scipy.signal as sps\n"
+    "from IPython.display import Audio, display\n"
+    "from src.audio import pink_noise, apply_eq_to_signal\n"
+    "from src.io import save_wav\n"
+    "\n"
+    "os.makedirs('../assets/audio', exist_ok=True)\n"
+    "dry = pink_noise(int(2.0 * sr), seed=0)\n"
+    "# 'in-room' = signal convolved with the room; correction pre-filters the dry signal\n"
+    "uncorrected = sps.fftconvolve(dry, rir)[:len(dry)]\n"
+    "corrected = sps.fftconvolve(apply_eq_to_signal(ddsp_eq, dry, sr), rir)[:len(dry)]\n"
+    "uncorrected = uncorrected / np.max(np.abs(uncorrected)) * 0.95\n"
+    "corrected = corrected / np.max(np.abs(corrected)) * 0.95\n"
+    "save_wav('../assets/audio/uncorrected.wav', uncorrected, sr)\n"
+    "save_wav('../assets/audio/corrected.wav', corrected, sr)\n"
+    "\n"
+    "fig, (a1, a2) = plt.subplots(1, 2, figsize=(13, 4), sharey=True)\n"
+    "for ax, sig, ttl in [(a1, uncorrected, 'uncorrected (in-room)'),\n"
+    "                     (a2, corrected, 'corrected (DDSP)')]:\n"
+    "    f, t, Sxx = sps.spectrogram(sig, sr, nperseg=2048)\n"
+    "    ax.pcolormesh(t, f, 10*np.log10(Sxx + 1e-12), shading='auto', cmap='magma')\n"
+    "    ax.set(title=ttl, xlabel='time [s]', yscale='log', ylim=(20, 20000))\n"
+    "a1.set_ylabel('frequency [Hz]')\n"
+    "plt.tight_layout(); plt.savefig('../assets/08_spectrogram.png', dpi=110); plt.show()\n"
+    "\n"
+    "print('Uncorrected (in-room):'); display(Audio(uncorrected, rate=sr))\n"
+    "print('Corrected (DDSP):'); display(Audio(corrected, rate=sr))"
+)
+
+md(
     "## 결론\n"
     "\n"
     "| 방법 | σ (보정 후) | 파라미터 | 비고 |\n"

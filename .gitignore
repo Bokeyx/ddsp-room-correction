@@ -7,4 +7,5 @@ data/my_room/*
 !data/**/.gitkeep
 *.wav
 !data/**/example_*.wav
+!assets/**/*.wav
 .ipynb_checkpoints/
