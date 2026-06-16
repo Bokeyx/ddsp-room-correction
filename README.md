@@ -76,9 +76,9 @@ ddsp-room-correction/
 
 ## 로드맵
 
-- [ ] **M1** 합성 RIR 생성 + WAV 입출력 + FFT 주파수 응답
-- [ ] **M2** 목표 곡선(flat) + 평가 지표(σ, RMSE)
-- [ ] **M3** 고전 EQ baseline — *첫 완성품*
+- [x] **M1** 합성 RIR 생성 + WAV 입출력 + FFT 주파수 응답
+- [x] **M2** 목표 곡선(flat) + 평가 지표(σ, RMSE)
+- [x] **M3** 고전 EQ baseline (1/3-옥타브 스무딩 + 게인 클램프) — 실제 RIR에서 σ 약 40% 감소 *첫 완성품*
 - [ ] **M4** DDSP 최적화 EQ — *헤드라인*
 - [ ] **M5** 공개 RIR 검증 + Harman 옵션
 - [ ] **M6** FIR 비교 + A/B 음원 + 노트북 정리
