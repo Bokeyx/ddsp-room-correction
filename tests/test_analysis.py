@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.analysis import frequency_response
+from src.analysis import frequency_response, fractional_octave_smooth
 from src.synthetic import unit_impulse
 
 
@@ -24,3 +24,39 @@ def test_frequency_response_axes():
     assert len(freqs) == len(mag_db)
     assert freqs[0] == 0.0
     assert freqs[-1] == sr / 2
+
+
+# --- fractional_octave_smooth ----------------------------------------------
+
+def test_smoothing_preserves_length():
+    freqs = np.logspace(np.log10(20.0), np.log10(20000.0), 500)
+    mag = np.random.default_rng(0).standard_normal(500)
+
+    smoothed = fractional_octave_smooth(freqs, mag)
+
+    assert smoothed.shape == mag.shape
+    assert len(smoothed) == len(mag)
+
+
+def test_smoothing_leaves_flat_curve_flat():
+    # A constant curve has no detail to smooth away; it must stay constant.
+    freqs = np.logspace(np.log10(20.0), np.log10(20000.0), 400)
+    mag = np.full_like(freqs, 7.5)
+
+    smoothed = fractional_octave_smooth(freqs, mag)
+
+    assert np.allclose(smoothed, 7.5, atol=1e-9)
+    assert np.std(smoothed) < 1e-9
+
+
+def test_smoothing_reduces_noise_std():
+    # Heavy bin-to-bin noise on top of a flat trend must be averaged down.
+    freqs = np.linspace(0.0, 24000.0, 4000)
+    rng = np.random.default_rng(123)
+    mag = 10.0 * rng.standard_normal(freqs.shape[0])
+
+    smoothed = fractional_octave_smooth(freqs, mag, fraction=3)
+
+    # The smoothing window spans many bins at higher frequencies, so the
+    # spread of the smoothed curve must be clearly smaller than the raw noise.
+    assert np.std(smoothed) < 0.5 * np.std(mag)

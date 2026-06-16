@@ -1,5 +1,6 @@
 import numpy as np
 
+from src.analysis import frequency_response, fractional_octave_smooth
 from src.eq_classic import (
     PeakingFilter,
     peaking_response_db,
@@ -7,6 +8,7 @@ from src.eq_classic import (
     design_classic_eq,
 )
 from src.metrics import flatness_std_db
+from src.synthetic import decaying_noise_rir
 from src.targets import flat_target
 
 
@@ -101,3 +103,60 @@ def test_design_eq_returns_peaking_filters_in_band():
 
     assert all(isinstance(f, PeakingFilter) for f in eq)
     assert all(20.0 <= f.freq_hz <= 20000.0 for f in eq)
+
+
+# --- M3.5 headline: real (synthetic) RIR ----------------------------------
+
+def test_smoothing_eq_flattens_real_rir():
+    """Smoothing + clamp must genuinely reduce sigma on a real RIR.
+
+    Comparison is made on the SMOOTHED response: the raw FFT carries thousands
+    of statistical-noise bins that no peaking EQ can (or should) chase, so
+    comparing raw sigma is not a fair test of the correction.
+    """
+    rir, sr = decaying_noise_rir(48000, 0.5, 0.4, seed=42)
+    freqs, resp = frequency_response(rir, sr)
+    target = flat_target(freqs)
+
+    eq = design_classic_eq(
+        resp, target, freqs, sr,
+        n_filters=48, q=4.0,
+        smoothing_fraction=3, max_gain_db=12.0,
+    )
+    corrected = resp + apply_eq_db(eq, freqs, sr)
+
+    before = flatness_std_db(fractional_octave_smooth(freqs, resp), freqs)
+    after = flatness_std_db(fractional_octave_smooth(freqs, corrected), freqs)
+
+    # Genuine, fair reduction of the broadband trend.
+    assert after < before
+    assert after < 0.7 * before  # at least 30% reduction
+
+    # Gains must respect the clamp.
+    assert all(abs(f.gain_db) <= 12.0 + 1e-9 for f in eq)
+
+
+def test_naive_mode_does_not_flatten_real_rir():
+    """Documents WHY smoothing is required.
+
+    The naive path (smoothing_fraction=None) greedily chases raw-FFT noise
+    spikes with wide filters, so on a real RIR it fails to reduce the smoothed
+    sigma -- it does not improve it (and typically makes it worse).
+    """
+    rir, sr = decaying_noise_rir(48000, 0.5, 0.4, seed=42)
+    freqs, resp = frequency_response(rir, sr)
+    target = flat_target(freqs)
+
+    eq = design_classic_eq(
+        resp, target, freqs, sr,
+        n_filters=8, q=4.0,
+        smoothing_fraction=None,
+    )
+    corrected = resp + apply_eq_db(eq, freqs, sr)
+
+    before = flatness_std_db(fractional_octave_smooth(freqs, resp), freqs)
+    after = flatness_std_db(fractional_octave_smooth(freqs, corrected), freqs)
+
+    # The naive baseline does NOT achieve a meaningful reduction; it is no
+    # better than (and in practice worse than) doing nothing.
+    assert after >= 0.9 * before
