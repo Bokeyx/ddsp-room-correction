@@ -9,4 +9,5 @@ data/my_room/*
 !data/**/example_*.wav
 !assets/**/*.wav
 .ipynb_checkpoints/
-HANDOFF.md
+WORKLOG.md
+docs/understanding_ko.md
