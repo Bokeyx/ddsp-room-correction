@@ -22,14 +22,14 @@ def code(text):
 
 
 md(
-    "# 룸 보정: 고전 EQ vs 미분가능 최적화(DDSP)\n"
+    "# Room Correction: Classic EQ vs Differentiable Optimization (DDSP)\n"
     "\n"
-    "방의 임펄스 응답(RIR)을 분석해 EQ 보정 필터를 자동 설계한다. 같은 문제를\n"
-    "**(1) 고전 그리디 휴리스틱**과 **(2) 경사하강법 기반 미분가능 최적화(DDSP)**로\n"
-    "풀고 정량 비교한다.\n"
+    "Analyze a room impulse response (RIR) and automatically design EQ correction filters.\n"
+    "The same problem is solved with **(1) a classic greedy heuristic** and **(2) gradient-descent\n"
+    "differentiable optimization (DDSP)**, then compared quantitatively.\n"
     "\n"
-    "핵심 지표는 **σ(가청대역 주파수응답 표준편차)** — 작을수록 평탄(보정 잘 됨).\n"
-    "σ는 전체 게인에 불변이라 '소리의 모양'만 평가한다."
+    "The headline metric is **σ (standard deviation of the audible-band frequency response)** —\n"
+    "lower means flatter (better correction). σ is gain-invariant, so it judges only the *shape* of the sound."
 )
 
 code(
@@ -57,15 +57,15 @@ code(
     "def smoothed_sigma(resp, freqs):\n"
     "    '''Fair flatness metric: sigma of the 1/3-octave-smoothed response.\n"
     "    Raw FFT bin noise is uncorrectable by any peaking EQ, so we compare on\n"
-    "    the smoothed response (same convention used in the test suite).'''\n"
+    "    the smoothed response (the same convention used in the test suite).'''\n"
     "    return flatness_std_db(fractional_octave_smooth(freqs, resp), freqs)"
 )
 
 md(
-    "## 1. 합성 RIR과 주파수 응답\n"
+    "## 1. Synthetic RIR and frequency response\n"
     "\n"
-    "검증을 위해 잔향(RT60=0.4s)을 가진 합성 RIR을 만든다. 이 방의 주파수 응답은\n"
-    "평탄하지 않고 들쭉날쭉하다 — 이게 보정 대상이다."
+    "For validation we generate a synthetic RIR with reverberation (RT60=0.4s). The room's\n"
+    "frequency response is not flat but jagged — that is what we will correct."
 )
 
 code(
@@ -82,11 +82,11 @@ code(
 )
 
 md(
-    "## 2. 왜 스무딩이 필요한가\n"
+    "## 2. Why smoothing is needed\n"
     "\n"
-    "raw FFT는 bin이 수천 개라 통계적 잡음으로 가득하다. 이걸 그대로 EQ로 쫓으면\n"
-    "오히려 응답을 망친다. **1/3-옥타브 스무딩**으로 광대역 추세만 남긴다 — 이게\n"
-    "보정이 실제로 다뤄야 할 신호다."
+    "A raw FFT has thousands of bins, full of statistical noise. Chasing that noise with EQ actually\n"
+    "wrecks the response. **1/3-octave smoothing** keeps only the broadband trend — that is the signal\n"
+    "the correction should actually target."
 )
 
 code(
@@ -102,10 +102,10 @@ code(
 )
 
 md(
-    "## 3. 고전 EQ baseline (그리디)\n"
+    "## 3. Classic EQ baseline (greedy)\n"
     "\n"
-    "스무딩한 편차에서 가장 큰 봉우리/골을 찾아 피킹 필터를 하나씩 배치(그리디).\n"
-    "게인은 ±12 dB로 클램프. 목표는 flat(0 dB)."
+    "Find the largest peak/dip in the smoothed deviation and place one peaking filter at a time\n"
+    "(greedy). Gains are clamped to ±12 dB. Target is flat (0 dB)."
 )
 
 code(
@@ -129,11 +129,11 @@ code(
 )
 
 md(
-    "## 4. DDSP 최적화 EQ (헤드라인)\n"
+    "## 4. DDSP optimization EQ (headline)\n"
     "\n"
-    "필터 게인을 **학습 파라미터**로 두고, '목표와의 편차 MSE'를 손실로 정의해\n"
-    "**PyTorch autograd + Adam**으로 모든 게인을 **동시에** 최적화한다. 그리디가\n"
-    "필터를 하나씩 순차로 놓는 것과 달리, 필터 간 상호작용까지 고려한다."
+    "Treat the filter gains as **learnable parameters** and optimize all of them **jointly** with\n"
+    "**PyTorch autograd + Adam**, minimizing the MSE deviation from the target. Unlike the greedy\n"
+    "method placing filters one at a time, this accounts for interactions between filters."
 )
 
 code(
@@ -153,12 +153,12 @@ code(
 )
 
 md(
-    "## 5. 비교: 고전 EQ vs DDSP vs FIR\n"
+    "## 5. Comparison: classic EQ vs DDSP vs FIR\n"
     "\n"
-    "세 번째 방식으로 **FIR**(주파수 샘플링 선형위상, 4097탭)을 더한다. 수천 탭으로\n"
-    "전 대역을 직접 매칭하므로 크기 평탄도는 좋지만, 8개 biquad처럼 '무엇을 왜'\n"
-    "보정했는지 읽을 수 없는 블랙박스다. 흥미롭게도 **해석 가능한 DDSP가 4097탭 FIR과\n"
-    "동등하거나 더 평탄**하다(아래)."
+    "As a third method we add **FIR** (linear-phase, frequency sampling, 4097 taps). With thousands\n"
+    "of taps it matches the whole band directly, so its magnitude flatness is good, but unlike 8\n"
+    "biquads you cannot read 'what it corrected and why' — it is a black box. Interestingly, the\n"
+    "**interpretable DDSP is as flat as, or flatter than, the 4097-tap FIR** (below)."
 )
 
 code(
@@ -187,12 +187,12 @@ code(
 )
 
 md(
-    "### nf 스윕: 왜 DDSP가 이기는가\n"
+    "### nf sweep: why DDSP wins\n"
     "\n"
-    "필터 개수를 늘려가며 두 방법을 비교한다. **고전 그리디는 nf≥32에서 σ≈0.40으로\n"
-    "포화**(필터를 더 줘도 못 채운다)하는 반면, **DDSP는 동시 최적화라 필터 예산이\n"
-    "늘수록 계속 개선**된다. 그래서 nf≥32부터 DDSP가 앞선다. (nf≤24처럼 예산이\n"
-    "빠듯하면 고전이 이길 수도 있다 — 정직하게 표기.)"
+    "Compare the two methods as the filter count grows. **The classic greedy method saturates around\n"
+    "σ≈0.40 from nf≥32** (more filters no longer help), while **DDSP keeps improving because it\n"
+    "optimizes all gains jointly**. So DDSP overtakes from nf≥32 onward. (When the budget is tight,\n"
+    "e.g. nf≤24, classic can still win — stated honestly.)"
 )
 
 code(
@@ -213,11 +213,11 @@ code(
 )
 
 md(
-    "## 6. 목표 곡선: flat vs Harman\n"
+    "## 6. Target curve: flat vs Harman\n"
     "\n"
-    "완전 평탄(flat)이 청감상 정답은 아니다. 청취 실험에 따르면 사람은 살짝 우하향하는\n"
-    "**Harman 스타일 인룸 곡선**(≈ -1 dB/oct 틸트)을 선호한다. 목표 곡선만 바꾸면\n"
-    "같은 파이프라인이 그대로 동작한다 — DDSP를 Harman 목표로 최적화한 결과를 본다."
+    "Perfectly flat is not the perceptual ideal. Listening studies show people prefer a slightly\n"
+    "downward-sloping **Harman-style in-room curve** (≈ -1 dB/oct tilt). Swapping only the target\n"
+    "curve lets the same pipeline run unchanged — here is DDSP optimized to the Harman target."
 )
 
 code(
@@ -243,12 +243,12 @@ code(
 )
 
 md(
-    "## 7. A/B 청취 데모\n"
+    "## 7. A/B listening demo\n"
     "\n"
-    "핑크노이즈를 방에 통과시킨 **보정 전**과, DDSP EQ로 사전 보정한 뒤 통과시킨\n"
-    "**보정 후**를 비교한다. 스펙트로그램에서 에너지가 더 고르게 펴지고, 아래 플레이어로\n"
-    "직접 들어볼 수 있다 (WAV는 `assets/audio/`). 잔향은 방 고유 특성이라 남고, 달라지는\n"
-    "것은 주파수 밸런스다."
+    "Compare pink noise sent through the room **before** correction and **after** pre-correcting it\n"
+    "with the DDSP EQ. The spectrogram energy spreads more evenly, and you can listen directly with\n"
+    "the players below (WAVs in `assets/audio/`). The reverb is intrinsic to the room and remains;\n"
+    "what changes is the frequency balance."
 )
 
 code(
@@ -281,22 +281,22 @@ code(
 )
 
 md(
-    "## 결론\n"
+    "## Conclusion\n"
     "\n"
-    "| 방법 | σ (보정 후) | 파라미터 | 비고 |\n"
+    "| Method | σ (after) | Parameters | Notes |\n"
     "|---|---|---|---|\n"
-    "| 보정 전 | ~0.68 | — | 들쭉날쭉한 방 응답 |\n"
-    "| 고전 그리디 EQ | ~0.41 | 48 biquad | nf≥32에서 포화 |\n"
-    "| FIR (선형위상) | ~0.25 | 4097 tap | 정밀하나 블랙박스 |\n"
-    "| **DDSP 최적화 EQ** | **~0.23** | 48 biquad | 해석 가능 + 최고 평탄도 |\n"
+    "| before | ~0.68 | — | jagged room response |\n"
+    "| classic greedy EQ | ~0.41 | 48 biquads | saturates at nf≥32 |\n"
+    "| FIR (linear phase) | ~0.25 | 4097 taps | precise but a black box |\n"
+    "| **DDSP optimized EQ** | **~0.23** | 48 biquads | interpretable + flattest |\n"
     "\n"
-    "- 고전 신호처리 baseline·FIR·ML 최적화(DDSP)를 한 파이프라인에서 공정 비교했다.\n"
-    "- **DDSP는 48개의 해석 가능한 파라미터만으로 4097탭 FIR과 동등 이상의 크기 평탄도**를\n"
-    "  달성한다. 모든 게인을 동시에 최적화해 그리디의 포화 한계를 넘는다.\n"
-    "- 목표 곡선(flat/Harman)을 주입식으로 바꿔 청감 선호까지 반영할 수 있다.\n"
-    "- **σ는 크기 평탄도만 본다.** FIR의 진짜 강점인 위상·시간축 보정은 이 지표에\n"
-    "  안 잡힌다 — 정직하게 짚어둘 점.\n"
-    "- **한계/향후**: 실제 측정 RIR 검증, A/B 청취 음원, 다수 피험자 블라인드 테스트."
+    "- A classic DSP baseline, an FIR, and ML optimization (DDSP) were compared fairly in one pipeline.\n"
+    "- **DDSP reaches magnitude flatness equal to or better than a 4097-tap FIR using just 48\n"
+    "  interpretable parameters.** It optimizes all gains jointly, surpassing the greedy method's plateau.\n"
+    "- The target curve (flat/Harman) is injectable, so listener preference can be reflected too.\n"
+    "- **σ only measures magnitude flatness.** FIR's real strength — phase / time-domain correction —\n"
+    "  is not captured by this metric; stated honestly.\n"
+    "- **Limitations / future work**: validation on real measured RIRs, A/B music tracks, multi-subject blind tests."
 )
 
 nb["cells"] = cells
