@@ -102,3 +102,18 @@ def test_design_fir_flattens_real_rir_and_beats_classic():
 
     # FIR must be no worse than the classic baseline at magnitude matching.
     assert fir_after <= classic_after * 1.1
+
+
+def test_design_fir_caps_n_taps_to_available_length_without_crashing():
+    # n_taps larger than the irfft length must be capped to the largest valid
+    # odd length, not overflow and crash on the window broadcast.
+    freqs = np.fft.rfftfreq(8192, d=1.0 / 48000)
+    response = np.zeros_like(freqs)
+    response[100] = 10.0
+    target = flat_target(freqs)
+
+    taps = design_fir_correction(response, target, freqs, 48000, n_taps=999999)
+
+    assert len(taps) % 2 == 1  # odd -> Type-I symmetric (linear phase)
+    assert len(taps) <= 8192  # never exceeds the irfft length
+    assert np.allclose(taps, taps[::-1])  # symmetric

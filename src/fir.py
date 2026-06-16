@@ -97,7 +97,8 @@ def design_fir_correction(
     if n_taps % 2 == 0:
         n_taps += 1  # force odd length for a Type-I symmetric FIR
     if n_taps > len(h_centered):
-        n_taps = len(h_centered) | 1  # keep odd, never exceed available samples
+        # largest odd value <= available samples (h_centered length is even)
+        n_taps = (len(h_centered) - 1) | 1
 
     centre = len(h_centered) // 2
     half = n_taps // 2
