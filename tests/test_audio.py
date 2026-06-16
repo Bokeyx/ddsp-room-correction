@@ -63,7 +63,7 @@ def test_apply_fir_impulse_matches_response_and_preserves_length():
     target_db = np.zeros_like(freqs_design)
     taps = design_fir_correction(response_db, target_db, freqs_design, sr, n_taps=1025)
 
-    out = apply_fir_to_signal(imp, taps)
+    out = apply_fir_to_signal(taps, imp)
     assert out.shape == imp.shape  # length preserved by mode='same'
 
     freqs, meas_db = frequency_response(out, sr)
