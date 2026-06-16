@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+data/public/*
+data/my_room/*
+!data/**/.gitkeep
+*.wav
+!data/**/example_*.wav
+.ipynb_checkpoints/
