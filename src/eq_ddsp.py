@@ -5,8 +5,8 @@ peaking-filter gains are learnable torch parameters optimised by Adam against a
 frequency-response-deviation loss. The magnitude response is computed with a
 differentiable closed form (no scipy.freqz) so autograd can flow into the gains.
 
-All torch ops run in float64 with a fixed seed and zero-initialised gains for
-deterministic, reproducible results.
+All torch ops run in float64 with zero-initialised gains for deterministic,
+reproducible results (no RNG is drawn, so no seeding is required).
 """
 
 import numpy as np
@@ -55,7 +55,13 @@ def peaking_response_db_torch(freq_hz, gain_db, q, freqs_hz, sr):
            + 2.0 * (a0 * a1 + a1 * a2) * cos_w
            + 2.0 * a0 * a2 * cos_2w)
 
-    return 10.0 * torch.log10(num / den)
+    # Guard log10 against a degenerate argument: at an evaluation bin equal to
+    # Nyquist (sr/2) with the centre also at Nyquist, both num and den -> 0, so
+    # num/den is 0/0 = NaN. Floor each operand with a tiny eps so the ratio (and
+    # its log10) stays finite. eps is ~17 orders below the normal magnitudes, so
+    # the real pipeline result is unchanged; the clamp only bites at that bin.
+    eps = 1e-20
+    return 10.0 * torch.log10(num.clamp_min(eps) / den.clamp_min(eps))
 
 
 def optimize_eq(
@@ -63,7 +69,7 @@ def optimize_eq(
     target_db,
     freqs_hz,
     sr,
-    n_filters=24,
+    n_filters=32,  # DDSP overtakes greedy classic from nf>=32 (see headline test)
     q=4.0,
     fmin=20.0,
     fmax=20000.0,
@@ -83,8 +89,8 @@ def optimize_eq(
     Returns a `list[PeakingFilter]` (same representation as the classic baseline)
     so it can be evaluated with `apply_eq_db`.
     """
-    torch.manual_seed(0)
-
+    # Determinism comes from the zero-initialised gains + the deterministic Adam
+    # update; no RNG is drawn here, so no manual_seed is needed.
     response_db = np.asarray(response_db, dtype=np.float64)
     target_db = np.asarray(target_db, dtype=np.float64)
     freqs_hz = np.asarray(freqs_hz, dtype=np.float64)
@@ -119,6 +125,8 @@ def optimize_eq(
         loss.backward()
         opt.step()
 
+    # Post-hoc clamp: the gains are optimised unconstrained, then truncated to
+    # the allowed range after training (not a constraint applied during descent).
     final_gains = torch.clamp(gains.detach(), -max_gain_db, max_gain_db).numpy()
 
     return [
