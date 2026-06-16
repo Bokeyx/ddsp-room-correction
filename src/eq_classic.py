@@ -18,9 +18,12 @@ class PeakingFilter:
     q: float
 
 
-def peaking_response_db(filt, freqs_hz, sr):
-    freqs_hz = np.asarray(freqs_hz, dtype=np.float64)
+def peaking_coeffs(filt, sr):
+    """RBJ peaking-EQ biquad coefficients (b, a) for `filt` at sample rate `sr`.
 
+    Single source of truth for the peaking biquad so the dB-domain response and
+    the time-domain audio application (src.audio) share identical coefficients.
+    """
     A = 10.0 ** (filt.gain_db / 40.0)
     w0 = 2.0 * np.pi * filt.freq_hz / sr
     alpha = np.sin(w0) / (2.0 * filt.q)
@@ -28,7 +31,12 @@ def peaking_response_db(filt, freqs_hz, sr):
 
     b = np.array([1.0 + alpha * A, -2.0 * cos_w0, 1.0 - alpha * A], dtype=np.float64)
     a = np.array([1.0 + alpha / A, -2.0 * cos_w0, 1.0 - alpha / A], dtype=np.float64)
+    return b, a
 
+
+def peaking_response_db(filt, freqs_hz, sr):
+    freqs_hz = np.asarray(freqs_hz, dtype=np.float64)
+    b, a = peaking_coeffs(filt, sr)
     _, h = freqz(b, a, worN=freqs_hz, fs=sr)
     return 20.0 * np.log10(np.abs(h))
 

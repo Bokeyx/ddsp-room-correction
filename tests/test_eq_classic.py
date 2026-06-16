@@ -3,10 +3,12 @@ import numpy as np
 from src.analysis import frequency_response, fractional_octave_smooth
 from src.eq_classic import (
     PeakingFilter,
+    peaking_coeffs,
     peaking_response_db,
     apply_eq_db,
     design_classic_eq,
 )
+from scipy.signal import freqz
 from src.metrics import flatness_std_db
 from src.synthetic import decaying_noise_rir
 from src.targets import flat_target
@@ -17,6 +19,25 @@ SR = 48000
 
 def _log_freqs(n=400, fmin=20.0, fmax=20000.0):
     return np.logspace(np.log10(fmin), np.log10(fmax), n)
+
+
+# --- peaking_coeffs (DRY: shared biquad coeffs) ----------------------------
+
+def test_peaking_coeffs_match_response_db():
+    """peaking_response_db must be the freqz of the (b, a) returned by
+    peaking_coeffs -- proving the response is derived from the same coeffs
+    that the time-domain audio path will use (no duplicated formula)."""
+    freqs = _log_freqs()
+    filt = PeakingFilter(1000.0, 6.0, 4.0)
+
+    b, a = peaking_coeffs(filt, SR)
+    assert isinstance(b, np.ndarray) and isinstance(a, np.ndarray)
+    assert b.shape == (3,) and a.shape == (3,)
+
+    _, h = freqz(b, a, worN=freqs, fs=SR)
+    expected = 20.0 * np.log10(np.abs(h))
+
+    assert np.allclose(peaking_response_db(filt, freqs, SR), expected, atol=1e-12)
 
 
 # --- peaking_response_db ---------------------------------------------------
