@@ -99,8 +99,9 @@ ddsp-room-correction/
 - [x] **M6a** 분석 노트북 + 보정 전/후·비교·nf 스윕 시각화
 - [x] **M6b** FIR 보정 필터 (선형위상, 주파수 샘플링) — 3-way 비교 완성
 - [x] **M6c** A/B 청취 음원 (보정 전/후 오디오 + 스펙트로그램, 노트북에 인라인 재생)
+- [x] **M7** Streamlit 인터랙티브 데모 (`app.py`)
 - [ ] **M5b** 공개 RIR 데이터셋 검증
-- [ ] **M7** (보너스) Streamlit 데모 / 직접 측정
+- [ ] **M8** (보너스) 직접 측정한 RIR 적용
 
 ## 설치 & 실행
 
@@ -112,7 +113,9 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements-dev.txt
-pytest          # 테스트 실행
+pytest                       # 테스트 실행 (53개)
+streamlit run app.py         # 인터랙티브 데모
+jupyter notebook notebooks/room_correction.ipynb   # 분석 노트북
 ```
 
 ## 기술 스택

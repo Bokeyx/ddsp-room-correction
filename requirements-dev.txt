@@ -3,3 +3,4 @@ pytest
 nbconvert
 nbformat
 ipykernel
+streamlit
