@@ -156,3 +156,57 @@ def test_peaking_response_torch_still_accepts_floats():
 
     assert resp.shape[0] == len(freqs)
     assert torch.isfinite(resp).all()
+
+
+# --- 6. learnable centres and Q -------------------------------------------
+
+def _colored_rir_48k():
+    rir, sr = decaying_noise_rir(48000, 0.5, 0.4, seed=42)
+    freqs, resp = frequency_response(rir, sr)
+    return resp, freqs, sr
+
+
+def test_optimize_eq_defaults_unchanged():
+    resp, freqs, sr = _colored_rir_48k()
+    filters = optimize_eq(resp, flat_target(freqs), freqs, sr, n_filters=8, iters=10)
+
+    centers = np.logspace(np.log10(20.0), np.log10(20000.0), 8)
+    assert np.allclose([f.freq_hz for f in filters], centers)
+    assert all(f.q == 4.0 for f in filters)
+
+
+def test_optimize_eq_learn_centers_stays_in_band():
+    resp, freqs, sr = _colored_rir_48k()
+    filters = optimize_eq(resp, flat_target(freqs), freqs, sr, n_filters=8,
+                          iters=30, learn_centers=True, fmin=20.0, fmax=20000.0)
+
+    assert all(20.0 <= f.freq_hz <= 20000.0 for f in filters)
+
+
+def test_optimize_eq_learn_q_stays_in_range():
+    resp, freqs, sr = _colored_rir_48k()
+    filters = optimize_eq(resp, flat_target(freqs), freqs, sr, n_filters=8,
+                          iters=30, learn_q=True, q_range=(0.5, 10.0))
+
+    assert all(0.5 <= f.q <= 10.0 for f in filters)
+
+
+def test_optimize_eq_learnable_is_deterministic():
+    resp, freqs, sr = _colored_rir_48k()
+    kw = dict(n_filters=8, iters=30, learn_centers=True, learn_q=True)
+    a = optimize_eq(resp, flat_target(freqs), freqs, sr, **kw)
+    b = optimize_eq(resp, flat_target(freqs), freqs, sr, **kw)
+
+    assert [f.freq_hz for f in a] == [f.freq_hz for f in b]
+    assert [f.q for f in a] == [f.q for f in b]
+    assert [f.gain_db for f in a] == [f.gain_db for f in b]
+
+
+def test_optimize_eq_returns_loss_history():
+    resp, freqs, sr = _colored_rir_48k()
+    filters, history = optimize_eq(resp, flat_target(freqs), freqs, sr,
+                                   n_filters=8, iters=15, return_history=True)
+
+    assert len(history) == 15
+    assert all(np.isfinite(history))
+    assert isinstance(filters, list)

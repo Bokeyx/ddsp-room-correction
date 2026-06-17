@@ -82,20 +82,27 @@ def optimize_eq(
     max_gain_db=12.0,
     iters=300,
     lr=0.5,
+    learn_centers=False,
+    learn_q=False,
+    q_range=(0.5, 10.0),
+    return_history=False,
 ):
-    """Optimise peaking-filter gains by gradient descent to flatten `response_db`.
+    """Optimise peaking-filter gains (and optionally centres and Q) to flatten
+    `response_db` toward `target_db` by gradient descent.
 
-    Centre frequencies are fixed (log-spaced over [fmin, fmax]); only the gains
-    are learned (torch.nn.Parameter, zero-initialised). The loss mirrors the
-    classic baseline for a fair comparison: smooth the response, sum the
-    differentiable peaking curves, mean-centre the residual in-band (sigma is
-    gain-invariant), and minimise its MSE.
+    By default only the gains are learned (centres log-spaced over [fmin, fmax],
+    Q fixed at `q`) -- identical to the original behaviour. With `learn_centers`
+    and/or `learn_q`, the centre frequency / Q become learnable too, optimised
+    jointly. They are bounded by a sigmoid reparametrisation -- centres stay in
+    [fmin, fmax], Q stays in `q_range` -- so training cannot push a filter past
+    Nyquist or to a non-positive Q (which would produce NaNs). Centre/Q latents
+    are initialised so the starting filter bank equals the gains-only one.
 
-    Returns a `list[PeakingFilter]` (same representation as the classic baseline)
-    so it can be evaluated with `apply_eq_db`.
+    Determinism: zero/derived initialisation, deterministic Adam, no RNG.
+
+    Returns a `list[PeakingFilter]`; with `return_history=True` returns
+    `(filters, loss_history)` where loss_history is one float per iteration.
     """
-    # Determinism comes from the zero-initialised gains + the deterministic Adam
-    # update; no RNG is drawn here, so no manual_seed is needed.
     response_db = np.asarray(response_db, dtype=np.float64)
     target_db = np.asarray(target_db, dtype=np.float64)
     freqs_hz = np.asarray(freqs_hz, dtype=np.float64)
@@ -107,34 +114,78 @@ def optimize_eq(
     else:
         design_resp = response_db
 
-    centers = np.logspace(np.log10(fmin), np.log10(fmax), n_filters)
+    log_fmin = np.log(fmin)
+    log_fmax = np.log(fmax)
+    init_centers = np.logspace(np.log10(fmin), np.log10(fmax), n_filters)
 
     resp_t = torch.as_tensor(design_resp, dtype=torch.float64)
     target_t = torch.as_tensor(target_db, dtype=torch.float64)
     mask = torch.as_tensor(band_mask(freqs_hz, fmin, fmax))
 
     gains = torch.nn.Parameter(torch.zeros(n_filters, dtype=torch.float64))
-    opt = torch.optim.Adam([gains], lr=lr)
+    param_groups = [{"params": [gains], "lr": lr}]
 
+    # Centre latents: sigmoid(c) maps a real latent into the normalised
+    # log-frequency position; init via logit so the start equals init_centers.
+    c = None
+    if learn_centers:
+        norm = (np.log(init_centers) - log_fmin) / (log_fmax - log_fmin)
+        norm = np.clip(norm, 1e-4, 1.0 - 1e-4)
+        c_init = np.log(norm / (1.0 - norm))
+        c = torch.nn.Parameter(torch.as_tensor(c_init, dtype=torch.float64))
+        param_groups.append({"params": [c], "lr": lr * 0.1})
+
+    # Q latents: sigmoid(qc) maps into [q_min, q_max]; init via logit so Q == q.
+    q_min, q_max = q_range
+    qc = None
+    if learn_q:
+        norm_q = (q - q_min) / (q_max - q_min)
+        norm_q = float(np.clip(norm_q, 1e-4, 1.0 - 1e-4))
+        qc_init = np.log(norm_q / (1.0 - norm_q))
+        qc = torch.nn.Parameter(torch.full((n_filters,), qc_init, dtype=torch.float64))
+        param_groups.append({"params": [qc], "lr": lr * 0.1})
+
+    opt = torch.optim.Adam(param_groups)
+    init_centers_t = torch.as_tensor(init_centers, dtype=torch.float64)
+
+    def current_centers():
+        if learn_centers:
+            return torch.exp(log_fmin + torch.sigmoid(c) * (log_fmax - log_fmin))
+        return init_centers_t
+
+    def current_qs():
+        if learn_q:
+            return q_min + torch.sigmoid(qc) * (q_max - q_min)
+        return None
+
+    history = []
     for _ in range(iters):
         opt.zero_grad()
+        centers_t = current_centers()
+        qs_t = current_qs()
         eq = torch.zeros_like(resp_t)
-        for i, fc in enumerate(centers):
-            eq = eq + peaking_response_db_torch(fc, gains[i], q, freqs_hz, sr)
+        for i in range(n_filters):
+            fc = centers_t[i] if learn_centers else float(init_centers[i])
+            qi = qs_t[i] if learn_q else q
+            eq = eq + peaking_response_db_torch(fc, gains[i], qi, freqs_hz, sr)
 
         current = resp_t + eq
-        residual = (current - target_t)
-        # Mean-centre in-band: correct the shape, not the absolute level.
+        residual = current - target_t
         residual = residual - residual[mask].mean()
         loss = (residual[mask] ** 2).mean()
         loss.backward()
         opt.step()
+        history.append(float(loss.detach()))
 
-    # Post-hoc clamp: the gains are optimised unconstrained, then truncated to
-    # the allowed range after training (not a constraint applied during descent).
-    final_gains = torch.clamp(gains.detach(), -max_gain_db, max_gain_db).numpy()
+    with torch.no_grad():
+        final_centers = current_centers().numpy() if learn_centers else init_centers
+        final_qs = current_qs().numpy() if learn_q else np.full(n_filters, q)
+        final_gains = torch.clamp(gains.detach(), -max_gain_db, max_gain_db).numpy()
 
-    return [
-        PeakingFilter(freq_hz=float(fc), gain_db=float(g), q=q)
-        for fc, g in zip(centers, final_gains)
+    filters = [
+        PeakingFilter(freq_hz=float(fc), gain_db=float(g), q=float(qq))
+        for fc, g, qq in zip(final_centers, final_gains, final_qs)
     ]
+    if return_history:
+        return filters, history
+    return filters
