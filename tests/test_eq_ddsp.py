@@ -146,8 +146,8 @@ def test_peaking_response_torch_differentiable_in_freq_and_q():
     resp = peaking_response_db_torch(freq, gain, q, freqs, 48000)
     resp.sum().backward()
 
-    assert freq.grad is not None and torch.isfinite(freq.grad)
-    assert q.grad is not None and torch.isfinite(q.grad)
+    assert freq.grad is not None and torch.isfinite(freq.grad).item() and freq.grad.item() != 0.0
+    assert q.grad is not None and torch.isfinite(q.grad).item() and q.grad.item() != 0.0
 
 
 def test_peaking_response_torch_still_accepts_floats():
