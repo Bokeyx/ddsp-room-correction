@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import torch
 
 from src.analysis import frequency_response, fractional_octave_smooth
@@ -210,3 +211,30 @@ def test_optimize_eq_returns_loss_history():
     assert len(history) == 15
     assert all(np.isfinite(history))
     assert isinstance(filters, list)
+
+
+# --- 7. input validation guards -------------------------------------------
+
+def test_optimize_eq_rejects_nonpositive_fmin():
+    resp, freqs, sr = _colored_rir_48k()
+    with pytest.raises(ValueError, match="fmin must be > 0"):
+        optimize_eq(resp, flat_target(freqs), freqs, sr, n_filters=4, iters=2, fmin=0.0)
+
+
+def test_optimize_eq_rejects_degenerate_q_range():
+    resp, freqs, sr = _colored_rir_48k()
+    with pytest.raises(ValueError, match="q_min < q_max"):
+        optimize_eq(resp, flat_target(freqs), freqs, sr, n_filters=4, iters=2,
+                    learn_q=True, q_range=(4.0, 4.0))
+
+
+def test_optimize_eq_learned_centers_actually_move():
+    """With learn_centers on, the centres must shift from their log-spaced init
+    after training -- proves the gradient reaches the centre latent (a detach
+    would leave them at init)."""
+    resp, freqs, sr = _colored_rir_48k()
+    init_centers = np.logspace(np.log10(20.0), np.log10(20000.0), 16)
+    filters = optimize_eq(resp, flat_target(freqs), freqs, sr, n_filters=16,
+                          iters=80, learn_centers=True)
+    learned = np.array([f.freq_hz for f in filters])
+    assert np.max(np.abs(learned - init_centers)) > 1.0  # at least one centre moved >1 Hz

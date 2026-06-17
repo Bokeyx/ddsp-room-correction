@@ -103,6 +103,9 @@ def optimize_eq(
     Returns a `list[PeakingFilter]`; with `return_history=True` returns
     `(filters, loss_history)` where loss_history is one float per iteration.
     """
+    if fmin <= 0.0:
+        raise ValueError(f"fmin must be > 0 (got {fmin}); log-spaced filter banks need positive frequencies")
+
     response_db = np.asarray(response_db, dtype=np.float64)
     target_db = np.asarray(target_db, dtype=np.float64)
     freqs_hz = np.asarray(freqs_hz, dtype=np.float64)
@@ -139,6 +142,8 @@ def optimize_eq(
     q_min, q_max = q_range
     qc = None
     if learn_q:
+        if q_min >= q_max:
+            raise ValueError(f"q_range must satisfy q_min < q_max; got {q_range}")
         norm_q = (q - q_min) / (q_max - q_min)
         norm_q = float(np.clip(norm_q, 1e-4, 1.0 - 1e-4))
         qc_init = np.log(norm_q / (1.0 - norm_q))
@@ -149,6 +154,8 @@ def optimize_eq(
     init_centers_t = torch.as_tensor(init_centers, dtype=torch.float64)
 
     def current_centers():
+        # Re-evaluates sigmoid(c) from the live Parameter each call, rebuilding
+        # the graph so gradients flow into c on loss.backward() (no detach).
         if learn_centers:
             return torch.exp(log_fmin + torch.sigmoid(c) * (log_fmax - log_fmin))
         return init_centers_t
