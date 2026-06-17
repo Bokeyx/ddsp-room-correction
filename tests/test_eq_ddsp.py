@@ -11,6 +11,7 @@ from src.eq_classic import (
 )
 from src.eq_ddsp import peaking_response_db_torch, optimize_eq
 from src.metrics import flatness_std_db
+from src.pipeline import design_band, smoothed_sigma
 from src.synthetic import decaying_noise_rir
 from src.targets import flat_target
 
@@ -238,3 +239,33 @@ def test_optimize_eq_learned_centers_actually_move():
                           iters=80, learn_centers=True)
     learned = np.array([f.freq_hz for f in filters])
     assert np.max(np.abs(learned - init_centers)) > 1.0  # at least one centre moved >1 Hz
+
+
+# --- 8. robustness + ablation-quality ----------------------------------------
+
+def test_optimize_eq_learnable_no_nan_low_sample_rate():
+    rir, sr = decaying_noise_rir(16000, 0.5, 0.4, seed=0)
+    freqs, resp = frequency_response(rir, sr)
+    fmin, fmax = design_band(sr)  # capped below Nyquist (7200 Hz at 16 kHz)
+
+    filters = optimize_eq(resp, flat_target(freqs), freqs, sr, n_filters=16,
+                          iters=40, learn_centers=True, learn_q=True,
+                          fmin=fmin, fmax=fmax)
+
+    eq = apply_eq_db(filters, freqs, sr)
+    assert np.isfinite(eq).all()
+    assert all(f.freq_hz < sr / 2 for f in filters)
+
+
+def test_full_ddsp_not_worse_than_gains_only():
+    rir, sr = decaying_noise_rir(48000, 0.5, 0.4, seed=42)
+    freqs, resp = frequency_response(rir, sr)
+    tgt = flat_target(freqs)
+
+    gains_only = optimize_eq(resp, tgt, freqs, sr, n_filters=24, iters=200)
+    full = optimize_eq(resp, tgt, freqs, sr, n_filters=24, iters=200,
+                       learn_centers=True, learn_q=True)
+
+    sg = smoothed_sigma(resp + apply_eq_db(gains_only, freqs, sr), freqs)
+    sf = smoothed_sigma(resp + apply_eq_db(full, freqs, sr), freqs)
+    assert sf <= sg + 0.02  # full must not be meaningfully worse
