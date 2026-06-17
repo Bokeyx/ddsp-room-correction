@@ -32,6 +32,74 @@ def apply_fir_to_signal(taps, signal):
     return np.convolve(signal, taps, mode="same")
 
 
+def _midi_to_freq(m):
+    return 440.0 * 2.0 ** ((m - 69) / 12.0)
+
+
+def _harmonic_stack(freq, n_samples, sr, n_harm):
+    """A bright harmonic tone (1/h amplitudes) of length n_samples."""
+    t = np.arange(n_samples) / sr
+    return sum((1.0 / h) * np.sin(2.0 * np.pi * freq * h * t) for h in range(1, n_harm + 1))
+
+
+def _plucked(freq, dur, sr, n_harm=12, decay=3.0):
+    """Plucked note: bright harmonic stack with a fast attack and decay."""
+    n = int(dur * sr)
+    t = np.arange(n) / sr
+    env = np.minimum(t / 0.008, 1.0) * np.exp(-decay * t / dur)
+    return env * _harmonic_stack(freq, n, sr, n_harm)
+
+
+def _sustained(freq, dur, sr, n_harm=4):
+    """Sustained note (pad/bass): soft attack and release, level body."""
+    n = int(dur * sr)
+    t = np.arange(n) / sr
+    env = np.minimum(t / 0.05, 1.0) * np.clip((dur - t) / 0.12, 0.0, 1.0)
+    return env * _harmonic_stack(freq, n, sr, n_harm)
+
+
+def demo_music(sr, duration_s=10.0):
+    """A short, license-clean synthesized music clip for the A/B listening demo.
+
+    An Am-F-C-G progression layered as bass + sustained pad + strummed plucks +
+    a bright melody, so the signal carries energy from the low end to the highs
+    -- that breadth is what makes the EQ correction audible. Fully generated
+    (no samples, no RNG), so it is deterministic and safe to commit.
+    """
+    chords = [
+        (45, [57, 60, 64], [69, 72, 76]),  # Am
+        (41, [53, 57, 60], [65, 69, 72]),  # F
+        (48, [60, 64, 67], [72, 76, 79]),  # C
+        (43, [55, 59, 62], [67, 71, 74]),  # G
+    ]
+    seg = duration_s / len(chords)
+    seg_len = int(seg * sr)
+    strum = int(0.04 * sr)  # gap between strummed notes
+    out = np.zeros(len(chords) * seg_len + sr)  # +1 s tail headroom
+
+    def add(segment, start):
+        end = min(start + len(segment), len(out))
+        out[start:end] += segment[: end - start]
+
+    for c, (root, triad, melody) in enumerate(chords):
+        base = c * seg_len
+        add(_sustained(_midi_to_freq(root), seg, sr, n_harm=3), base)          # bass
+        for m in triad:
+            add(0.4 * _sustained(_midi_to_freq(m), seg, sr, n_harm=4), base)   # pad
+        for i, m in enumerate(triad):
+            add(0.7 * _plucked(_midi_to_freq(m), seg, sr), base + i * strum)   # strum
+        step = seg / len(melody)
+        for j, m in enumerate(melody):
+            add(0.5 * _plucked(_midi_to_freq(m), step * 1.2, sr, decay=2.5),
+                base + int(j * step * sr))                                     # melody
+
+    out = out[: len(chords) * seg_len]
+    peak = np.max(np.abs(out))
+    if peak > 0:
+        out = out / peak * 0.9
+    return out
+
+
 def pink_noise(n, seed):
     """Reproducible 1/f pink noise, n samples, normalised to max|x| ~= 0.99.
 

@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.audio import apply_eq_to_signal, apply_fir_to_signal, pink_noise
+from src.audio import apply_eq_to_signal, apply_fir_to_signal, demo_music, pink_noise
 from src.analysis import frequency_response
 from src.eq_classic import PeakingFilter, apply_eq_db
 from src.fir import fir_response_db, design_fir_correction
@@ -100,3 +100,33 @@ def test_pink_noise_low_freq_tilt_and_amplitude():
     low = m[f < 200.0].mean()
     high = m[f > 2000.0].mean()
     assert low > high
+
+
+# --- 5. demo music clip (A/B listening) -------------------------------------
+
+def test_demo_music_length_mono_and_normalised():
+    x = demo_music(SR, duration_s=2.0)
+
+    assert x.ndim == 1
+    assert abs(len(x) - 2.0 * SR) <= SR // 10   # ~2 s (allow chord-grid rounding)
+    peak = np.max(np.abs(x))
+    assert 0.0 < peak <= 1.0                     # audible but not clipping
+
+
+def test_demo_music_deterministic():
+    assert np.array_equal(demo_music(SR, duration_s=2.0), demo_music(SR, duration_s=2.0))
+
+
+def test_demo_music_is_broadband():
+    """A good EQ A/B clip must carry energy across the band (bass to highs),
+    otherwise the correction is inaudible. Check low and high bands are not
+    empty relative to the total."""
+    x = demo_music(SR, duration_s=2.0)
+    freqs = np.fft.rfftfreq(len(x), d=1.0 / SR)
+    power = np.abs(np.fft.rfft(x)) ** 2
+    total = power.sum()
+
+    low = power[(freqs >= 40) & (freqs < 200)].sum() / total
+    high = power[freqs >= 3000].sum() / total
+    assert low > 0.02     # real low-end content
+    assert high > 0.001   # real high-end content

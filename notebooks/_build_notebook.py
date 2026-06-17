@@ -281,6 +281,33 @@ code(
 )
 
 md(
+    "### 7b. Music A/B (full-band synthesized clip)\n"
+    "\n"
+    "Pink noise shows the spectral change cleanly; music makes it intuitive. Below is a short,\n"
+    "license-clean **synthesized** clip (Am–F–C–G: bass + sustained pad + plucked chords + melody, so it\n"
+    "spans the whole band) played through the same room, before vs after the DDSP correction. Listen for\n"
+    "the boomy / honky room resonances easing — the reverb stays, the tonal balance evens out."
+)
+
+code(
+    "from src.audio import demo_music\n"
+    "\n"
+    "music = demo_music(sr, duration_s=10.0)\n"
+    "music_uncorr = sps.fftconvolve(music, rir)[:len(music)]\n"
+    "music_corr = sps.fftconvolve(apply_eq_to_signal(ddsp_eq, music, sr), rir)[:len(music)]\n"
+    "music_uncorr = music_uncorr / np.max(np.abs(music_uncorr)) * 0.95\n"
+    "music_corr = music_corr / np.max(np.abs(music_corr)) * 0.95\n"
+    "music_dry = music / np.max(np.abs(music)) * 0.95\n"
+    "save_wav('../assets/audio/music_dry.wav', music_dry, sr)\n"
+    "save_wav('../assets/audio/music_uncorrected.wav', music_uncorr, sr)\n"
+    "save_wav('../assets/audio/music_corrected.wav', music_corr, sr)\n"
+    "\n"
+    "print('Dry (no room):'); display(Audio(music_dry, rate=sr))\n"
+    "print('In-room, uncorrected:'); display(Audio(music_uncorr, rate=sr))\n"
+    "print('In-room, DDSP-corrected:'); display(Audio(music_corr, rate=sr))"
+)
+
+md(
     "## 8. Validation on real measured RIRs (MIT IR Survey)\n"
     "\n"
     "The synthetic story above is clean, but the real test is *measured* rooms. The **MIT IR Survey**\n"
