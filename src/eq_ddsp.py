@@ -20,13 +20,19 @@ from src.metrics import band_mask
 def peaking_response_db_torch(freq_hz, gain_db, q, freqs_hz, sr):
     """Differentiable dB magnitude response of a single RBJ peaking biquad.
 
-    `gain_db` may be a torch tensor (the learnable parameter); autograd flows
-    through it. Uses the closed-form |H(e^jw)|^2 of a biquad so no scipy.freqz
-    is involved.
+    `gain_db`, `freq_hz`, and `q` may each be a torch tensor (a learnable
+    parameter); autograd flows through all three. Uses the closed-form
+    |H(e^jw)|^2 of a biquad so no scipy.freqz is involved. Plain floats are
+    accepted too (the gains-only path passes float freq/q).
     """
-    if not torch.is_tensor(gain_db):
-        gain_db = torch.tensor(gain_db, dtype=torch.float64)
-    gain_db = gain_db.to(torch.float64)
+    def _t(x):
+        if torch.is_tensor(x):
+            return x.to(torch.float64)
+        return torch.tensor(x, dtype=torch.float64)
+
+    gain_db = _t(gain_db)
+    freq_hz = _t(freq_hz)
+    q = _t(q)
 
     w = torch.as_tensor(
         2.0 * np.pi * np.asarray(freqs_hz, dtype=np.float64) / sr,
@@ -34,9 +40,9 @@ def peaking_response_db_torch(freq_hz, gain_db, q, freqs_hz, sr):
     )
 
     A = 10.0 ** (gain_db / 40.0)
-    w0 = 2.0 * np.pi * float(freq_hz) / sr
-    alpha = np.sin(w0) / (2.0 * float(q))
-    cos_w0 = np.cos(w0)
+    w0 = 2.0 * np.pi * freq_hz / sr
+    alpha = torch.sin(w0) / (2.0 * q)
+    cos_w0 = torch.cos(w0)
 
     b0 = 1.0 + alpha * A
     b1 = -2.0 * cos_w0
@@ -55,14 +61,10 @@ def peaking_response_db_torch(freq_hz, gain_db, q, freqs_hz, sr):
            + 2.0 * (a0 * a1 + a1 * a2) * cos_w
            + 2.0 * a0 * a2 * cos_2w)
 
-    # Guard log10 against a degenerate argument: at an evaluation bin equal to
-    # Nyquist (sr/2) with the centre also at Nyquist, both num and den -> 0, so
-    # num/den is 0/0 = NaN. Floor each operand with a tiny eps so the ratio (and
-    # its log10) stays finite. eps is ~17 orders below the normal magnitudes, so
-    # the real pipeline result is unchanged; the clamp only bites at that bin.
-    # Defense-in-depth: pipeline.correct also caps the design band below Nyquist,
-    # so via that path no centre reaches Nyquist; this guard still protects direct
-    # optimize_eq callers that bypass correct().
+    # Guard log10 against a degenerate 0/0 at Nyquist (centre == Nyquist).
+    # eps is ~17 orders below normal magnitudes, so the real result is unchanged.
+    # Defense-in-depth: pipeline.correct caps the design band below Nyquist, so via
+    # that path no centre reaches Nyquist; this guard protects direct callers.
     eps = 1e-20
     return 10.0 * torch.log10(num.clamp_min(eps) / den.clamp_min(eps))
 

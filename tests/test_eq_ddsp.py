@@ -133,3 +133,26 @@ def test_optimize_eq_flattens_real_rir_and_matches_classic():
 
     # Gains respect the clamp.
     assert all(abs(f.gain_db) <= 12.0 + 1e-9 for f in ddsp_eq)
+
+
+# --- 5. differentiable in freq and Q --------------------------------------
+
+def test_peaking_response_torch_differentiable_in_freq_and_q():
+    freqs = np.fft.rfftfreq(2048, 1.0 / 48000)
+    freq = torch.tensor(1000.0, dtype=torch.float64, requires_grad=True)
+    q = torch.tensor(4.0, dtype=torch.float64, requires_grad=True)
+    gain = torch.tensor(6.0, dtype=torch.float64)
+
+    resp = peaking_response_db_torch(freq, gain, q, freqs, 48000)
+    resp.sum().backward()
+
+    assert freq.grad is not None and torch.isfinite(freq.grad)
+    assert q.grad is not None and torch.isfinite(q.grad)
+
+
+def test_peaking_response_torch_still_accepts_floats():
+    freqs = np.fft.rfftfreq(2048, 1.0 / 48000)
+    resp = peaking_response_db_torch(1000.0, torch.tensor(6.0, dtype=torch.float64), 4.0, freqs, 48000)
+
+    assert resp.shape[0] == len(freqs)
+    assert torch.isfinite(resp).all()
