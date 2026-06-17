@@ -72,6 +72,22 @@ DDSP:     0.23   ← flattest (66% better) ★
 
 ---
 
+## 6b. Beyond the synthetic test (what was added later)
+
+- **Real measured rooms (MIT IR Survey).** The numbers above use a synthetic room. We also validated on
+  **20 real measured rooms** (bedrooms, offices, classrooms). Average σ: before 4.20 → classic 1.27 →
+  FIR 1.31 → **DDSP 0.91**. DDSP is the flattest *and* the most consistent room-to-room. **Honest twist:**
+  on these short, noisy real measurements **FIR drops behind both EQ methods** — the synthetic ranking
+  doesn't transfer blindly, which is exactly why measuring real data matters.
+- **DDSP can learn more than volume.** Originally DDSP only learned each knob's *amount* (gain). Since the
+  math is differentiable, it can also learn **where** each knob sits (frequency) and **how wide** it is (Q).
+  Ablation on the headline room: gains-only σ 0.232 → gains+freq+Q σ **0.230** (a little flatter). The
+  knobs are kept inside a safe range so training can't push them somewhere that breaks the sound.
+- **Music A/B.** Besides pink noise, there's a short license-clean **synthesized music clip** played
+  through the room before/after correction — easier to *hear* the tonal balance even out.
+
+---
+
 ## 7. How to see it yourself
 
 ```bash
@@ -106,9 +122,12 @@ src/         the actual feature code (one file = one job)
   eq_classic.py classic EQ
   eq_ddsp.py    DDSP (ML optimization) ★ the star
   fir.py        FIR
-  audio.py      apply correction to real sound
+  audio.py      apply correction to real sound + the demo music clip
+  datasets.py   list MIT IR Survey rooms, filter indoor vs outdoor
+  evaluation.py before/after σ per room (multi-room & multi-seed studies)
   pipeline.py   one entry point that calls the methods
-tests/       automated checks that the code is correct (53)
+scripts/     download_mit_rir.py (fetch the real RIRs, gitignored data)
+tests/       automated checks that the code is correct (83)
 notebooks/   analysis story + graphs
 app.py       Streamlit web demo
 assets/      generated graphs and audio
