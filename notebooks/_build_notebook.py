@@ -7,6 +7,7 @@ then execute the notebook to fill in plot outputs:
     jupyter nbconvert --to notebook --execute --inplace \
         --ExecutePreprocessor.timeout=900 notebooks/room_correction.ipynb
 """
+import os
 import nbformat as nbf
 
 nb = nbf.v4.new_notebook()
@@ -150,6 +151,49 @@ code(
     "          f'({100*(1-ddsp_after/before):.0f}% flatter)')\n"
     "plt.xlabel('frequency [Hz]'); plt.ylabel('magnitude [dB]')\n"
     "plt.tight_layout(); plt.savefig('../assets/04_ddsp.png', dpi=110); plt.show()"
+)
+
+md(
+    "### 4b. DDSP ablation: learning gains vs gains + frequency + Q\n"
+    "\n"
+    "So far DDSP learned only the filter **gains** (fixed centres, fixed Q). Because the magnitude\n"
+    "response is fully differentiable, we can also let it learn **where** each filter sits (centre\n"
+    "frequency) and **how wide** it is (Q). Centres/Q are bounded by a sigmoid reparametrisation so\n"
+    "training cannot push a filter past Nyquist or to a non-positive Q. Below: the loss curves, how the\n"
+    "centres moved, and whether the extra freedom actually lowers sigma."
+)
+
+code(
+    "g_eq, g_hist = optimize_eq(resp, target, freqs, sr, n_filters=NF, iters=ITERS,\n"
+    "                           return_history=True)\n"
+    "f_eq, f_hist = optimize_eq(resp, target, freqs, sr, n_filters=NF, iters=ITERS,\n"
+    "                           learn_centers=True, learn_q=True, return_history=True)\n"
+    "g_sigma = smoothed_sigma(resp + apply_eq_db(g_eq, freqs, sr), freqs)\n"
+    "f_sigma = smoothed_sigma(resp + apply_eq_db(f_eq, freqs, sr), freqs)\n"
+    "\n"
+    "init_centers = np.logspace(np.log10(20), np.log10(20000), NF)\n"
+    "learned_centers = np.array([flt.freq_hz for flt in f_eq])\n"
+    "learned_gains = np.array([flt.gain_db for flt in f_eq])\n"
+    "\n"
+    "fig, (axL, axR) = plt.subplots(1, 2, figsize=(13, 4))\n"
+    "axL.plot(g_hist, color='tab:red', lw=1.6, label=f'gains only (sigma={g_sigma:.3f})')\n"
+    "axL.plot(f_hist, color='tab:purple', lw=1.6, label=f'gains+freq+Q (sigma={f_sigma:.3f})')\n"
+    "axL.set(title='Training loss (lower = flatter)', xlabel='iteration', ylabel='MSE loss', yscale='log')\n"
+    "axL.legend()\n"
+    "for x0, x1, g in zip(init_centers, learned_centers, learned_gains):\n"
+    "    axR.plot([x0, x1], [0, g], color='gray', lw=0.6, alpha=0.5)\n"
+    "axR.scatter(init_centers, np.zeros(NF), s=12, color='tab:gray', label='initial centre')\n"
+    "axR.scatter(learned_centers, learned_gains, s=18, color='tab:purple', label='learned centre / gain')\n"
+    "axR.set(title='How the filters moved (centre & gain)', xlabel='frequency [Hz]',\n"
+    "        ylabel='gain [dB]', xscale='log', xlim=(20, 20000))\n"
+    "axR.axhline(0, color='k', lw=0.8, alpha=0.4); axR.legend()\n"
+    "plt.tight_layout(); plt.savefig('../assets/11_ddsp_ablation.png', dpi=110); plt.show()\n"
+    "\n"
+    "print(f'gains only       sigma = {g_sigma:.3f}')\n"
+    "print(f'gains+freq+Q     sigma = {f_sigma:.3f}')\n"
+    "print('Learning centre frequency and Q jointly '\n"
+    "      + ('further flattens' if f_sigma < g_sigma else 'does not beat')\n"
+    "      + ' the gains-only baseline on this room.')"
 )
 
 md(
@@ -427,6 +471,7 @@ md(
 nb["cells"] = cells
 nb.metadata["kernelspec"] = {"name": "python3", "display_name": "Python 3", "language": "python"}
 
-with open("room_correction.ipynb", "w", encoding="utf-8") as f:
+_out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "room_correction.ipynb")
+with open(_out_path, "w", encoding="utf-8") as f:
     nbf.write(nb, f)
-print("wrote room_correction.ipynb with", len(cells), "cells")
+print("wrote", _out_path, "with", len(cells), "cells")

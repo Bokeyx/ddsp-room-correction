@@ -30,6 +30,15 @@ improving because it optimizes all gains jointly** (DDSP overtakes from nf≥32 
 
 ![nf sweep](assets/06_nf_sweep.png)
 
+### DDSP can learn more than gains
+
+Because the magnitude response is differentiable, DDSP can also learn each filter's **centre
+frequency and Q**, not just its gain (bounded by a sigmoid reparametrization so training stays below
+Nyquist). Ablation on the headline room: gains-only σ 0.232 → gains+freq+Q σ 0.230 — the extra freedom
+flattens it a little further. See notebook section 4b for the loss curves and how the filters moved.
+
+![DDSP ablation](assets/11_ddsp_ablation.png)
+
 ### Holds up on real measured rooms
 
 The synthetic story is clean, but the real test is measured rooms. Validated on 20 rooms from the
