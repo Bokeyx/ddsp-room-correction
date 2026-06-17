@@ -60,6 +60,9 @@ def peaking_response_db_torch(freq_hz, gain_db, q, freqs_hz, sr):
     # num/den is 0/0 = NaN. Floor each operand with a tiny eps so the ratio (and
     # its log10) stays finite. eps is ~17 orders below the normal magnitudes, so
     # the real pipeline result is unchanged; the clamp only bites at that bin.
+    # Defense-in-depth: pipeline.correct also caps the design band below Nyquist,
+    # so via that path no centre reaches Nyquist; this guard still protects direct
+    # optimize_eq callers that bypass correct().
     eps = 1e-20
     return 10.0 * torch.log10(num.clamp_min(eps) / den.clamp_min(eps))
 

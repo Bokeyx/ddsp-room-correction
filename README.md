@@ -30,7 +30,28 @@ improving because it optimizes all gains jointly** (DDSP overtakes from nf≥32 
 
 ![nf sweep](assets/06_nf_sweep.png)
 
+### Holds up on real measured rooms
+
+The synthetic story is clean, but the real test is measured rooms. Validated on 20 rooms from the
+**MIT IR Survey** (Traer & McDermott, PNAS 2016 — bedrooms, offices, classrooms; outdoor/transit
+recordings excluded), reporting σ as mean ± std across rooms:
+
+| Method | σ (mean ± std) | |
+|---|---|---|
+| before | 4.20 ± 1.42 | jagged real rooms |
+| classic greedy EQ | 1.27 ± 0.42 | |
+| FIR (linear phase) | 1.31 ± 0.51 | |
+| **DDSP optimized EQ** | **0.91 ± 0.11** | flattest **and** most consistent (¼ the spread) |
+
+**DDSP is both the flattest on average and the most consistent room-to-room.** Note the honest twist:
+on these short, noisy 16 kHz measurements the frequency-sampled **FIR drops behind both EQ methods** —
+the synthetic ranking does not transfer blindly, which is exactly why measured-data validation matters.
+(σ is measured on the same band the filters correct, capped just below the 8 kHz Nyquist.)
+
+![real RIR validation](assets/09_real_rirs.png)
+
 > Full analysis and figures: [`notebooks/room_correction.ipynb`](notebooks/room_correction.ipynb).
+> Fetch the dataset once with `python scripts/download_mit_rir.py` (gitignored, not stored in the repo).
 
 ## Why this project
 
@@ -89,7 +110,11 @@ ddsp-room-correction/
 │   ├── fir.py         # FIR filter (comparison)
 │   ├── audio.py       # apply correction to real audio
 │   ├── metrics.py     # σ / RMSE evaluation
+│   ├── datasets.py    # MIT IR Survey listing + indoor/outdoor filtering
+│   ├── evaluation.py  # per-RIR before/after σ for the multi-room & multi-seed studies
 │   └── pipeline.py    # unified interface over the three methods
+├── scripts/
+│   └── download_mit_rir.py   # fetch the MIT IR Survey into data/public/ (gitignored)
 ├── tests/             # pytest (TDD)
 ├── notebooks/         # analysis story · visualization
 └── app.py             # Streamlit demo
@@ -106,7 +131,7 @@ ddsp-room-correction/
 - [x] **M6b** FIR correction filter (linear-phase, frequency sampling) — completes the 3-way comparison
 - [x] **M6c** A/B listening audio (before/after + spectrogram, inline playback in the notebook)
 - [x] **M7** Streamlit interactive demo (`app.py`)
-- [ ] **M5b** validation on public RIR datasets
+- [x] **M5b** validation on a public RIR dataset (MIT IR Survey, 20 real rooms) — DDSP flattest & most consistent
 - [ ] **M8** (bonus) apply to self-measured RIRs
 
 ## Install & run
@@ -119,9 +144,12 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements-dev.txt
-pytest                       # run tests (53)
+pytest                       # run tests (66)
 streamlit run app.py         # interactive demo
 jupyter notebook notebooks/room_correction.ipynb   # analysis notebook
+
+# optional: fetch real measured RIRs for the section-8 validation (gitignored)
+python scripts/download_mit_rir.py
 ```
 
 ## Tech stack
@@ -130,6 +158,8 @@ jupyter notebook notebooks/room_correction.ipynb   # analysis notebook
 
 ## Limitations & future work
 
+- The real-RIR validation uses the 16 kHz MIT IR Survey mirror, so the correction band is capped just
+  under 8 kHz. A full-rate measurement set would extend the comparison to the top octave.
 - Formal blind listening tests (multiple subjects) are out of scope — left as future work.
 - Real-time embedded deployment (e.g. real-time convolution on a Raspberry Pi) is an extension topic.
 
