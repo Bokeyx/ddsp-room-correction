@@ -89,7 +89,7 @@ the synthetic ranking does not transfer blindly, which is exactly why measured-d
 |------|--------|-------------|
 | Objective (headline) | response std **σ** | Used in all results. Gain-invariant flatness (on the 1/3-octave-smoothed response) |
 | Objective (secondary) | RMSE (`metrics.deviation_rmse_db`) | RMS deviation from the target curve (after level alignment) |
-| Perceptual | A/B audio (pink noise) · spectrogram | Hear and see the in-room before/after |
+| Perceptual | A/B audio (pink noise + synthesized music) · spectrogram | Hear and see the in-room before/after |
 
 > The DDSP **loss = MSE of the deviation from the target curve**, so the optimization objective and the evaluation metric coincide.
 
