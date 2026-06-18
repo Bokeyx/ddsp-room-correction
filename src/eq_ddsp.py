@@ -86,6 +86,7 @@ def optimize_eq(
     learn_q=False,
     q_range=(0.5, 10.0),
     return_history=False,
+    weights=None,
 ):
     """Optimise peaking-filter gains (and optionally centres and Q) to flatten
     `response_db` toward `target_db` by gradient descent.
@@ -100,6 +101,10 @@ def optimize_eq(
 
     Determinism: zero/derived initialisation, deterministic Adam, no RNG.
 
+    `weights` (optional, one per frequency) tilts the loss toward a perceptual
+    objective via a weighted MSE with weighted mean-centring; `None` keeps the
+    flat MSE and reproduces the original behaviour exactly.
+
     Returns a `list[PeakingFilter]`; with `return_history=True` returns
     `(filters, loss_history)` where loss_history is one float per iteration.
     """
@@ -109,6 +114,15 @@ def optimize_eq(
     response_db = np.asarray(response_db, dtype=np.float64)
     target_db = np.asarray(target_db, dtype=np.float64)
     freqs_hz = np.asarray(freqs_hz, dtype=np.float64)
+
+    w_t = None
+    if weights is not None:
+        weights = np.asarray(weights, dtype=np.float64)
+        if weights.shape != freqs_hz.shape:
+            raise ValueError(
+                f"weights length {weights.shape} must match freqs_hz {freqs_hz.shape}"
+            )
+        w_t = torch.as_tensor(weights, dtype=torch.float64)
 
     if smoothing_fraction is not None:
         design_resp = fractional_octave_smooth(
@@ -178,8 +192,13 @@ def optimize_eq(
 
         current = resp_t + eq
         residual = current - target_t
-        residual = residual - residual[mask].mean()
-        loss = (residual[mask] ** 2).mean()
+        if w_t is None:
+            residual = residual - residual[mask].mean()
+            loss = (residual[mask] ** 2).mean()
+        else:
+            wm = (w_t * residual)[mask].sum() / w_t[mask].sum()
+            residual = residual - wm
+            loss = (w_t * residual ** 2)[mask].sum() / w_t[mask].sum()
         loss.backward()
         opt.step()
         history.append(float(loss.detach()))

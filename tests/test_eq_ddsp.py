@@ -269,3 +269,49 @@ def test_full_ddsp_not_worse_than_gains_only():
     sg = smoothed_sigma(resp + apply_eq_db(gains_only, freqs, sr), freqs)
     sf = smoothed_sigma(resp + apply_eq_db(full, freqs, sr), freqs)
     assert sf <= sg + 0.02  # full must not be meaningfully worse
+
+
+def test_optimize_eq_uniform_weights_matches_none():
+    import numpy as np
+    from src.synthetic import decaying_noise_rir
+    from src.analysis import frequency_response
+    from src.targets import flat_target
+    from src.eq_ddsp import optimize_eq
+    rir, sr = decaying_noise_rir(48000, 0.5, rt60_s=0.4, seed=0)
+    freqs, resp = frequency_response(rir, sr)
+    target = flat_target(freqs)
+    a = optimize_eq(resp, target, freqs, sr, n_filters=12, iters=40)
+    b = optimize_eq(resp, target, freqs, sr, n_filters=12, iters=40,
+                    weights=np.ones_like(freqs))
+    assert np.allclose([f.gain_db for f in a], [f.gain_db for f in b], atol=1e-9)
+
+
+def test_optimize_eq_rejects_mismatched_weights():
+    import numpy as np
+    import pytest
+    from src.synthetic import decaying_noise_rir
+    from src.analysis import frequency_response
+    from src.targets import flat_target
+    from src.eq_ddsp import optimize_eq
+    rir, sr = decaying_noise_rir(48000, 0.5, rt60_s=0.4, seed=0)
+    freqs, resp = frequency_response(rir, sr)
+    target = flat_target(freqs)
+    with pytest.raises(ValueError):
+        optimize_eq(resp, target, freqs, sr, n_filters=8, iters=5,
+                    weights=np.ones(len(freqs) + 1))
+
+
+def test_optimize_eq_perceptual_is_deterministic():
+    import numpy as np
+    from src.synthetic import decaying_noise_rir
+    from src.analysis import frequency_response
+    from src.targets import flat_target
+    from src.eq_ddsp import optimize_eq
+    from src.perceptual import perceptual_weights
+    rir, sr = decaying_noise_rir(48000, 0.5, rt60_s=0.4, seed=0)
+    freqs, resp = frequency_response(rir, sr)
+    target = flat_target(freqs)
+    w = perceptual_weights(freqs)
+    a = optimize_eq(resp, target, freqs, sr, n_filters=12, iters=40, weights=w)
+    b = optimize_eq(resp, target, freqs, sr, n_filters=12, iters=40, weights=w)
+    assert [f.gain_db for f in a] == [f.gain_db for f in b]
