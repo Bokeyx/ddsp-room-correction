@@ -28,3 +28,13 @@ def to_eqapo_config(filters):
     ]
     lines += [f"Filter: ON PK {_peak_line(f)}" for f in filters]
     return "\n".join(lines) + "\n"
+
+
+def to_rew_filters(filters):
+    """REW parametric-filter import text (numbered filters)."""
+    lines = ["Filter Settings file"]
+    lines += [
+        f"Filter {i}: ON PK {_peak_line(f)}"
+        for i, f in enumerate(filters, start=1)
+    ]
+    return "\n".join(lines) + "\n"
