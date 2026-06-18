@@ -1,6 +1,7 @@
 import numpy as np
+import pytest
 
-from src.metrics import band_mask, flatness_std_db, deviation_rmse_db
+from src.metrics import band_mask, flatness_std_db, deviation_rmse_db, perceptual_sigma
 
 
 def test_band_mask_includes_boundaries():
@@ -68,3 +69,11 @@ def test_rmse_align_false_keeps_offset():
     response = target + 5.0
 
     assert abs(deviation_rmse_db(response, target, freqs, align=False) - 5.0) < 1e-9
+
+
+def test_perceptual_sigma_equals_flatness_std_with_uniform_weights():
+    freqs = np.linspace(0.0, 24000.0, 2049)
+    rng = np.random.default_rng(0)
+    resp = rng.normal(size=freqs.shape)
+    w = np.ones_like(freqs)
+    assert perceptual_sigma(resp, freqs, w) == pytest.approx(flatness_std_db(resp, freqs))
