@@ -4,8 +4,10 @@ __pycache__/
 .pytest_cache/
 data/public/*
 data/my_room/*
+data/air_database_release_1_4/*
 !data/**/.gitkeep
 *.wav
+*.mat
 !data/**/example_*.wav
 !assets/**/*.wav
 .ipynb_checkpoints/

@@ -59,6 +59,28 @@ the synthetic ranking does not transfer blindly, which is exactly why measured-d
 
 ![real RIR validation](assets/09_real_rirs.png)
 
+### Full-rate top octave (Aachen AIR, 48 kHz)
+
+The MIT mirror is 16 kHz, so its correction stops just under 8 kHz. A second, independent measured set —
+the **Aachen AIR database** (RWTH, 48 kHz; different rooms, different mics) — extends the check to the
+**top octave (8–20 kHz)** the 16 kHz data could never reach. Eight listening-type rooms (booth / office /
+meeting / lecture), σ on the full 20–20 kHz band:
+
+| Method | σ (mean over 8 rooms) |
+|---|---|
+| before | 2.42 |
+| classic greedy EQ | **0.62** |
+| DDSP optimized EQ | 0.63 |
+| FIR (linear phase) | 1.10 |
+
+The clean win is the **top octave**: on a representative room DDSP flattens it from σ 1.06 → **0.33**
+(69% flatter) — the band the 16 kHz mirror never touched is now corrected at full rate. On the *full*
+band classic (0.62) and DDSP (0.63) are a near-tie: the 48-filter budget now covers a 3× wider band, so
+greedy placement stays competitive — an honest contrast with the narrower-band synthetic result where
+DDSP pulls clearly ahead. (FIR stays last, as on the MIT set.)
+
+![full-rate AIR validation](assets/10_air_fullrate.png)
+
 > Full analysis and figures: [`notebooks/room_correction.ipynb`](notebooks/room_correction.ipynb).
 > Fetch the dataset once with `python scripts/download_mit_rir.py` (gitignored, not stored in the repo).
 
@@ -123,7 +145,7 @@ ddsp-room-correction/
 │   ├── fir.py         # FIR filter (comparison)
 │   ├── audio.py       # apply correction to real audio
 │   ├── metrics.py     # σ / RMSE evaluation
-│   ├── datasets.py    # MIT IR Survey listing + indoor/outdoor filtering
+│   ├── datasets.py    # MIT IR Survey listing + Aachen AIR (.mat) loader
 │   ├── evaluation.py  # per-RIR before/after σ for the multi-room & multi-seed studies
 │   └── pipeline.py    # unified interface over the three methods
 ├── scripts/
@@ -145,6 +167,7 @@ ddsp-room-correction/
 - [x] **M6c** A/B listening audio (before/after + spectrogram, inline playback in the notebook)
 - [x] **M7** Streamlit interactive demo (`app.py`)
 - [x] **M5b** validation on a public RIR dataset (MIT IR Survey, 20 real rooms) — DDSP flattest & most consistent
+- [x] **M5c** full-rate validation (Aachen AIR, 48 kHz) — corrects the 8–20 kHz top octave the 16 kHz mirror could not reach
 - [ ] **M8** (bonus) apply to self-measured RIRs
 
 ## Install & run
@@ -157,7 +180,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements-dev.txt
-pytest                       # run tests (66)
+pytest                       # run tests (86)
 streamlit run app.py         # interactive demo
 jupyter notebook notebooks/room_correction.ipynb   # analysis notebook
 
@@ -171,8 +194,9 @@ python scripts/download_mit_rir.py
 
 ## Limitations & future work
 
-- The real-RIR validation uses the 16 kHz MIT IR Survey mirror, so the correction band is capped just
-  under 8 kHz. A full-rate measurement set would extend the comparison to the top octave.
+- The 16 kHz MIT IR Survey mirror caps that correction band just under 8 kHz; the top octave is covered
+  separately by the 48 kHz Aachen AIR set. The two are different datasets, so the full-rate result is an
+  independent check rather than the same MIT rooms re-run at full bandwidth.
 - Formal blind listening tests (multiple subjects) are out of scope — left as future work.
 - Real-time embedded deployment (e.g. real-time convolution on a Raspberry Pi) is an extension topic.
 

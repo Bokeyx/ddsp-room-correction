@@ -85,6 +85,11 @@ DDSP:     0.23   ← flattest (66% better) ★
   knobs are kept inside a safe range so training can't push them somewhere that breaks the sound.
 - **Music A/B.** Besides pink noise, there's a short license-clean **synthesized music clip** played
   through the room before/after correction — easier to *hear* the tonal balance even out.
+- **The top octave, at full rate.** The MIT mirror is 16 kHz, so it stops just under 8 kHz. A second
+  measured set — the 48 kHz **Aachen AIR** rooms — reaches the **8–20 kHz top octave**: on a representative
+  room DDSP flattens it from σ 1.06 → 0.33. Honest nuance: over the *whole* band the three methods land
+  close (classic 0.62 and DDSP 0.63 are a near-tie) because 48 filters now cover a 3× wider band — the
+  synthetic ranking doesn't transfer unchanged, which is the point of checking real, full-rate data.
 
 ---
 
@@ -123,11 +128,11 @@ src/         the actual feature code (one file = one job)
   eq_ddsp.py    DDSP (ML optimization) ★ the star
   fir.py        FIR
   audio.py      apply correction to real sound + the demo music clip
-  datasets.py   list MIT IR Survey rooms, filter indoor vs outdoor
+  datasets.py   list MIT IR Survey rooms + load Aachen AIR 48 kHz (.mat) rooms
   evaluation.py before/after σ per room (multi-room & multi-seed studies)
   pipeline.py   one entry point that calls the methods
 scripts/     download_mit_rir.py (fetch the real RIRs, gitignored data)
-tests/       automated checks that the code is correct (83)
+tests/       automated checks that the code is correct (86)
 notebooks/   analysis story + graphs
 app.py       Streamlit web demo
 assets/      generated graphs and audio
