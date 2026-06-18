@@ -315,3 +315,30 @@ def test_optimize_eq_perceptual_is_deterministic():
     a = optimize_eq(resp, target, freqs, sr, n_filters=12, iters=40, weights=w)
     b = optimize_eq(resp, target, freqs, sr, n_filters=12, iters=40, weights=w)
     assert [f.gain_db for f in a] == [f.gain_db for f in b]
+
+
+def test_perceptual_training_lowers_perceptual_sigma():
+    import numpy as np
+    from src.synthetic import decaying_noise_rir
+    from src.analysis import frequency_response, fractional_octave_smooth
+    from src.targets import flat_target
+    from src.eq_ddsp import optimize_eq
+    from src.eq_classic import apply_eq_db
+    from src.metrics import perceptual_sigma, flatness_std_db
+    from src.perceptual import perceptual_weights
+
+    rir, sr = decaying_noise_rir(48000, 0.5, rt60_s=0.4, seed=0)
+    freqs, resp = frequency_response(rir, sr)
+    target = flat_target(freqs)
+    w = perceptual_weights(freqs)
+
+    flat = optimize_eq(resp, target, freqs, sr, n_filters=16, iters=120)
+    perc = optimize_eq(resp, target, freqs, sr, n_filters=16, iters=120, weights=w)
+
+    flat_corr = fractional_octave_smooth(freqs, resp + apply_eq_db(flat, freqs, sr))
+    perc_corr = fractional_octave_smooth(freqs, resp + apply_eq_db(perc, freqs, sr))
+
+    # Perceptual training wins on the perceptual scorecard...
+    assert perceptual_sigma(perc_corr, freqs, w) < perceptual_sigma(flat_corr, freqs, w)
+    # ...and plain sigma stays comparable (not a collapse).
+    assert flatness_std_db(perc_corr, freqs) < 1.5 * flatness_std_db(flat_corr, freqs)
