@@ -92,6 +92,10 @@ the synthetic ranking does not transfer blindly, which is exactly why measured-d
 - **flat**: flatten the whole band — the reference point that proves the algorithm can truly flatten.
 - **Harman**: a listener-preference curve — reflects that flat is not perceptually ideal; a real-world recommendation.
 
+Swapping the target is where the **secondary RMSE metric earns its place**: a Harman curve is meant to
+slope, so flatness σ would punish the intended tilt (σ ≈ 1.4 on a correctly Harman-matched response).
+RMSE-to-target stays honest — DDSP lands within 0.24 dB of *either* target (flat 0.23, Harman 0.24).
+
 ## Evaluation
 
 | Axis | Metric | Description |
