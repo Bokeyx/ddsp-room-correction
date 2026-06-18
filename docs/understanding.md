@@ -90,6 +90,11 @@ DDSP:     0.23   ← flattest (66% better) ★
   room DDSP flattens it from σ 1.06 → 0.33. Honest nuance: over the *whole* band the three methods land
   close (classic 0.62 and DDSP 0.63 are a near-tie) because 48 filters now cover a 3× wider band — the
   synthetic ranking doesn't transfer unchanged, which is the point of checking real, full-rate data.
+- **An ear-shaped objective.** The plain loss treats every FFT bin equally, but those bins crowd the
+  treble, so it over-weights highs. Weighting the loss the way we hear (critical-band density + the
+  ISO 226 equal-loudness curve) only matters when filters are scarce: under a tight 12-filter budget the
+  hearing-weighted fit lowers a perceptual flatness score (1.04 → 0.95) by spending its filters where
+  they're audible — accepting a slightly worse raw σ. A clear, honest trade-off (notebook §4c).
 
 ---
 
@@ -132,7 +137,7 @@ src/         the actual feature code (one file = one job)
   evaluation.py before/after σ per room (multi-room & multi-seed studies)
   pipeline.py   one entry point that calls the methods
 scripts/     download_mit_rir.py (fetch the real RIRs, gitignored data)
-tests/       automated checks that the code is correct (86)
+tests/       automated checks that the code is correct (95)
 notebooks/   analysis story + graphs
 app.py       Streamlit web demo
 assets/      generated graphs and audio

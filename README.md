@@ -39,6 +39,18 @@ flattens it a little further. See notebook section 4b for the loss curves and ho
 
 ![DDSP ablation](assets/11_ddsp_ablation.png)
 
+### A hearing-weighted objective
+
+The plain loss is an MSE over linearly-spaced FFT bins — and half of those bins sit in the top octave,
+so it quietly over-weights treble. Re-tilting it toward hearing (a 1/ERB critical-band density term plus
+the ISO 226 40-phon equal-loudness curve) only matters when filters are **scarce**: with the full
+48-filter budget both objectives flatten the room and tie. Under a tight **12-filter** budget the
+hearing-weighted fit spends its few filters where they are audible — **perceptual-σ 1.04 → 0.95** — at
+the honest cost of a slightly higher plain σ (0.58 → 0.71). The weighting and the trade-off are in
+notebook section 4c.
+
+![perceptual loss](assets/12_perceptual.png)
+
 ### Holds up on real measured rooms
 
 The synthetic story is clean, but the real test is measured rooms. Validated on 20 rooms from the
@@ -180,7 +192,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements-dev.txt
-pytest                       # run tests (86)
+pytest                       # run tests (95)
 streamlit run app.py         # interactive demo
 jupyter notebook notebooks/room_correction.ipynb   # analysis notebook
 

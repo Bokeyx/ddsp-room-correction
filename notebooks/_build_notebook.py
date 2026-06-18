@@ -197,6 +197,43 @@ code(
 )
 
 md(
+    "### 4c. Hearing-weighted objective (perceptual loss)\n"
+    "\n"
+    "The loss so far is a flat MSE over linearly-spaced FFT bins — dense in the treble, so it quietly\n"
+    "over-weights high frequencies. Here we re-tilt it toward hearing: a critical-band density term\n"
+    "(1/ERB) plus the ISO 226 40-phon equal-loudness curve. The weighting only bites when filters are\n"
+    "**scarce** — with the full 48-filter budget both objectives flatten the room completely and tie — so\n"
+    "we use a tight 12-filter budget and score both fits on plain σ *and* perceptual-σ, reported honestly."
+)
+
+code(
+    "from src.perceptual import perceptual_weights\n"
+    "from src.metrics import perceptual_sigma, flatness_std_db\n"
+    "\n"
+    "NF_PERC = 12  # tight budget: perceptual weighting only matters when filters are scarce\n"
+    "w = perceptual_weights(freqs)\n"
+    "flat_eq = optimize_eq(resp, target, freqs, sr, n_filters=NF_PERC, iters=ITERS)\n"
+    "perc_eq = optimize_eq(resp, target, freqs, sr, n_filters=NF_PERC, iters=ITERS, weights=w)\n"
+    "flat_corr = fractional_octave_smooth(freqs, resp + apply_eq_db(flat_eq, freqs, sr))\n"
+    "perc_corr = fractional_octave_smooth(freqs, resp + apply_eq_db(perc_eq, freqs, sr))\n"
+    "\n"
+    "for name, c in [('flat MSE', flat_corr), ('perceptual', perc_corr)]:\n"
+    "    print(f'{name:11s} plain sigma {flatness_std_db(c, freqs):.3f} | '\n"
+    "          f'perceptual sigma {perceptual_sigma(c, freqs, w):.3f}')\n"
+    "\n"
+    "fig, (axL, axR) = plt.subplots(1, 2, figsize=(13, 4))\n"
+    "axL.semilogx(freqs, w, color='#7FB5B5', lw=1.8)\n"
+    "axL.set(xlim=(20, 20000), title='Perceptual weight w(f): ERB density x equal-loudness',\n"
+    "        xlabel='frequency [Hz]', ylabel='weight (mean 1)')\n"
+    "axR.semilogx(freqs, flat_corr - flat_corr.mean(), color='#F6C28B', lw=1.6, label='flat MSE')\n"
+    "axR.semilogx(freqs, perc_corr - perc_corr.mean(), color='#B5A7E6', lw=1.8, label='perceptual')\n"
+    "axR.axhline(0, color='k', lw=0.8, ls='--', alpha=0.5)\n"
+    "axR.legend(); axR.set(xlim=(20, 20000), title=f'Corrected ({NF_PERC} filters): flat vs hearing-weighted',\n"
+    "                      xlabel='frequency [Hz]', ylabel='magnitude [dB]')\n"
+    "plt.tight_layout(); plt.savefig('../assets/12_perceptual.png', dpi=110); plt.show()"
+)
+
+md(
     "## 5. Comparison: classic EQ vs DDSP vs FIR\n"
     "\n"
     "As a third method we add **FIR** (linear-phase, frequency sampling, 4097 taps). With thousands\n"
