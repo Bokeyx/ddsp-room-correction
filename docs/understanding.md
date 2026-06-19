@@ -95,6 +95,10 @@ DDSP:     0.23   ← flattest (66% better) ★
   ISO 226 equal-loudness curve) only matters when filters are scarce: under a tight 12-filter budget the
   hearing-weighted fit lowers a perceptual flatness score (1.04 → 0.95) by spending its filters where
   they're audible — accepting a slightly worse raw σ. A clear, honest trade-off (notebook §4c).
+- **You can take the correction home.** A designed correction used to vanish when the browser tab closed.
+  The app now exports it to formats real audio tools import — **Equalizer APO** config, **REW** filter
+  list, a **FIR impulse WAV** for convolution engines, and a **CSV** archive — so the result can actually
+  EQ the system that plays your music, not just a plot.
 
 ---
 
@@ -135,9 +139,10 @@ src/         the actual feature code (one file = one job)
   audio.py      apply correction to real sound + the demo music clip
   datasets.py   list MIT IR Survey rooms + load Aachen AIR 48 kHz (.mat) rooms
   evaluation.py before/after σ per room (multi-room & multi-seed studies)
+  export.py     correction → Equalizer APO / REW / FIR WAV / CSV files
   pipeline.py   one entry point that calls the methods
 scripts/     download_mit_rir.py (fetch the real RIRs, gitignored data)
-tests/       automated checks that the code is correct (95)
+tests/       automated checks that the code is correct (101)
 notebooks/   analysis story + graphs
 app.py       Streamlit web demo
 assets/      generated graphs and audio
