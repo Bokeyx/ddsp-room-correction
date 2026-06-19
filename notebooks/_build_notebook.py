@@ -571,6 +571,36 @@ code(
 )
 
 md(
+    "## 10. Robustness: win-rate and statistical significance\n"
+    "\n"
+    "Mean sigma can hide rooms where a method loses, and a gap in means may be noise. Two stronger\n"
+    "checks on the 20 real MIT rooms from section 8: a per-room **win-rate** (who is flattest, room by\n"
+    "room) and a **paired Wilcoxon signed-rank test** of DDSP vs the classic baseline."
+)
+
+code(
+    "from src.robustness import win_counts, paired_sigma_test\n"
+    "\n"
+    "rows = [d for _, d in real_rows]\n"
+    "if not rows:\n"
+    "    print('No real rooms loaded; run scripts/download_mit_rir.py to see this section.')\n"
+    "else:\n"
+    "    wr_methods = ['classic', 'ddsp', 'fir']\n"
+    "    wins = win_counts(rows, wr_methods)\n"
+    "    wr_colors = ['#7FB5B5', '#F6C28B', '#B5A7E6']\n"
+    "    bars = plt.bar(wr_methods, [wins[m] for m in wr_methods], color=wr_colors)\n"
+    "    for b, m in zip(bars, wr_methods):\n"
+    "        plt.text(b.get_x()+b.get_width()/2, wins[m], str(wins[m]), ha='center', va='bottom')\n"
+    "    plt.title(f'Flattest-method win-rate over {len(rows)} real rooms')\n"
+    "    plt.ylabel('rooms won (lowest sigma)')\n"
+    "    plt.tight_layout(); plt.savefig('../assets/14_winrate.png', dpi=110); plt.show()\n"
+    "    print('win counts:', wins)\n"
+    "    res = paired_sigma_test(rows, 'ddsp', 'classic')\n"
+    "    print(f\"DDSP vs classic: n={res['n']}, median diff={res['median_diff']:.3f} dB, \"\n"
+    "          f\"Wilcoxon p={res['pvalue']:.4g}\")"
+)
+
+md(
     "## Conclusion\n"
     "\n"
     "| Method | σ (after) | Parameters | Notes |\n"

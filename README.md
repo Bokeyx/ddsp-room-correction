@@ -147,6 +147,12 @@ RMSE-to-target stays honest — DDSP lands within 0.24 dB of *either* target (fl
 
 > The DDSP **loss = MSE of the deviation from the target curve**, so the optimization objective and the evaluation metric coincide.
 
+**Win-rate & significance (20 real rooms).** Beyond average σ: DDSP is the flattest in **14/20** rooms
+(FIR 6, classic 0), and its σ improvement over the classic baseline is statistically significant —
+paired Wilcoxon signed-rank, median −0.28 dB, **p ≈ 8.2e-05**. The edge is real, not a lucky room.
+
+![win-rate](assets/14_winrate.png)
+
 ## Project layout
 
 ```
@@ -205,6 +211,7 @@ Regenerate them anytime with `python scripts/generate_examples.py`.
 - [x] **M7** Streamlit interactive demo (`app.py`) — pastel theme + EN/KO toggle + export the correction to Equalizer APO / REW / FIR WAV / CSV, deployed live
 - [x] **M5b** validation on a public RIR dataset (MIT IR Survey, 20 real rooms) — DDSP flattest & most consistent
 - [x] **M5c** full-rate validation (Aachen AIR, 48 kHz) — corrects the 8–20 kHz top octave the 16 kHz mirror could not reach
+- [x] **M5d** robustness: per-room win-rate + paired-Wilcoxon significance over the 20 real rooms (DDSP flattest in 14/20, p ≈ 8.2e-05)
 - [ ] **M8** (bonus) apply to self-measured RIRs
 
 ## Install & run

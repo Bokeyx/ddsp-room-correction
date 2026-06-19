@@ -99,6 +99,9 @@ DDSP:     0.23   ← flattest (66% better) ★
   The app now exports it to formats real audio tools import — **Equalizer APO** config, **REW** filter
   list, a **FIR impulse WAV** for convolution engines, and a **CSV** archive — so the result can actually
   EQ the system that plays your music, not just a plot.
+- **Not cherry-picked.** Beyond averages, DDSP is the flattest in **14 of 20** real rooms (FIR 6,
+  classic 0), and its edge over the classic EQ is statistically significant (paired Wilcoxon signed-rank,
+  **p ≈ 8.2e-05**) — the improvement is real, not a lucky room.
 
 ---
 
