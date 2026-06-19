@@ -31,3 +31,9 @@ def test_export_description_keys_present_both_languages():
     for key in ("export_intro", "desc_classic", "desc_ddsp", "desc_fir"):
         assert key in STRINGS["en"], key
         assert key in STRINGS["ko"], key
+
+
+def test_export_format_help_keys_present_both_languages():
+    for key in ("help_eqapo", "help_rew", "help_csv", "help_firwav"):
+        assert key in STRINGS["en"], key
+        assert key in STRINGS["ko"], key

@@ -2,12 +2,9 @@
 
 Run with:  streamlit run app.py
 """
-import io
-
 import altair as alt
 import numpy as np
 import scipy.signal as sps
-import soundfile as sf
 import streamlit as st
 
 from src.analysis import fractional_octave_smooth, frequency_response
@@ -36,11 +33,11 @@ if source == "example":
     rir, sr = preset_rir(room)
     st.sidebar.caption(t(lang, "room_caption"))
 else:
-    up = st.sidebar.file_uploader(t(lang, "uploader"), type=["wav"])
+    up = st.sidebar.file_uploader(t(lang, "uploader"), type=["wav", "flac"])
     if up is None:
         st.info(t(lang, "upload_info"))
         st.stop()
-    rir, sr = sf.read(io.BytesIO(up.read()), dtype="float64")
+    rir, sr = decode_audio(up.read())
     if rir.ndim > 1:
         rir = rir.mean(axis=1)
 
@@ -120,21 +117,26 @@ for m in methods:
         # FIR: impulse WAV + CSV
         cdl[0].download_button(
             t(lang, "btn_firwav"), data=to_fir_wav_bytes(corr, sr),
-            file_name=f"correction_{m}.wav", mime="audio/wav", key=f"wav_{m}")
+            file_name=f"correction_{m}.wav", mime="audio/wav", key=f"wav_{m}",
+            help=t(lang, "help_firwav"))
         cdl[1].download_button(
             t(lang, "btn_csv"), data=to_csv(None, freqs, resp, corrected_db, n_taps=len(corr)),
-            file_name=f"correction_{m}.csv", mime="text/csv", key=f"csv_{m}")
+            file_name=f"correction_{m}.csv", mime="text/csv", key=f"csv_{m}",
+            help=t(lang, "help_csv"))
     else:
         # peaking filters: EQ APO + REW + CSV
         cdl[0].download_button(
             t(lang, "btn_eqapo"), data=to_eqapo_config(corr),
-            file_name=f"correction_{m}_eqapo.txt", mime="text/plain", key=f"apo_{m}")
+            file_name=f"correction_{m}_eqapo.txt", mime="text/plain", key=f"apo_{m}",
+            help=t(lang, "help_eqapo"))
         cdl[1].download_button(
             t(lang, "btn_rew"), data=to_rew_filters(corr),
-            file_name=f"correction_{m}_rew.txt", mime="text/plain", key=f"rew_{m}")
+            file_name=f"correction_{m}_rew.txt", mime="text/plain", key=f"rew_{m}",
+            help=t(lang, "help_rew"))
         cdl[2].download_button(
             t(lang, "btn_csv"), data=to_csv(corr, freqs, resp, corrected_db),
-            file_name=f"correction_{m}.csv", mime="text/csv", key=f"csv_{m}")
+            file_name=f"correction_{m}.csv", mime="text/csv", key=f"csv_{m}",
+            help=t(lang, "help_csv"))
 
 # --- A/B listening for the first selected method ---
 if methods:
