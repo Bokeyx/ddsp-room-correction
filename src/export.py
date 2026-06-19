@@ -38,3 +38,11 @@ def to_rew_filters(filters):
         for i, f in enumerate(filters, start=1)
     ]
     return "\n".join(lines) + "\n"
+
+
+def to_fir_wav_bytes(taps, sr):
+    """FIR impulse encoded as a mono float32 WAV (for convolution engines)."""
+    taps = np.asarray(taps, dtype=np.float32)
+    buf = io.BytesIO()
+    sf.write(buf, taps, int(sr), format="WAV", subtype="FLOAT")
+    return buf.getvalue()

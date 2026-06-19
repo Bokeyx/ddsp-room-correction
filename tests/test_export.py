@@ -1,5 +1,10 @@
+import io
+
+import numpy as np
+import soundfile as sf
+
 from src.eq_classic import PeakingFilter
-from src.export import to_eqapo_config, to_rew_filters
+from src.export import to_eqapo_config, to_rew_filters, to_fir_wav_bytes
 
 
 def test_eqapo_config_lines_and_header():
@@ -31,3 +36,16 @@ def test_rew_filters_numbered_with_header():
     assert lines[0] == "Filter Settings file"
     assert "Filter 1: ON PK Fc 120 Hz Gain -3.00 dB Q 4.000" in lines
     assert "Filter 2: ON PK Fc 1000 Hz Gain 2.50 dB Q 2.000" in lines
+
+
+def test_fir_wav_bytes_roundtrip():
+    sr = 48000
+    taps = np.array([0.0, 1.0, -0.5, 0.25], dtype=np.float64)
+    blob = to_fir_wav_bytes(taps, sr)
+    assert isinstance(blob, bytes)
+
+    data, read_sr = sf.read(io.BytesIO(blob), dtype="float32")
+    assert read_sr == sr
+    assert data.ndim == 1
+    assert len(data) == len(taps)
+    assert np.allclose(data, taps, atol=1e-6)
