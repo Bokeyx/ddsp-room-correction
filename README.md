@@ -170,7 +170,7 @@ ddsp-room-correction/
 │   ├── eq_ddsp.py     # differentiable optimization EQ (headline)
 │   ├── fir.py         # FIR filter (comparison)
 │   ├── rooms.py       # friendly preset rooms for the app (synthetic RIRs)
-│   ├── fonts.py       # register the bundled Korean font for matplotlib
+│   ├── charts.py      # tidy DataFrame for the app's interactive Altair chart
 │   ├── audio.py       # apply correction to real audio (+ prepare uploaded clips)
 │   ├── metrics.py     # σ / RMSE evaluation
 │   ├── datasets.py    # MIT IR Survey listing + Aachen AIR (.mat) loader
@@ -227,7 +227,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements-dev.txt
-pytest                       # run tests (121)
+pytest                       # run tests (122)
 streamlit run app.py         # interactive demo (correct a RIR, then export the filters)
 jupyter notebook notebooks/room_correction.ipynb   # analysis notebook
 
