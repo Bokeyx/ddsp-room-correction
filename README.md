@@ -227,7 +227,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements-dev.txt
-pytest                       # run tests (122)
+pytest                       # run tests (123)
 streamlit run app.py         # interactive demo (correct a RIR, then export the filters)
 jupyter notebook notebooks/room_correction.ipynb   # analysis notebook
 
