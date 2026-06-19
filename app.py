@@ -11,11 +11,11 @@ import soundfile as sf
 import streamlit as st
 
 from src.analysis import fractional_octave_smooth, frequency_response
-from src.audio import apply_eq_to_signal, apply_fir_to_signal, pink_noise
+from src.audio import apply_eq_to_signal, apply_fir_to_signal, pink_noise, prepare_clip
 from src.export import to_eqapo_config, to_rew_filters, to_fir_wav_bytes, to_csv
 from src.i18n import LANGUAGES, t
 from src.pipeline import correct, smoothed_sigma
-from src.synthetic import decaying_noise_rir
+from src.rooms import preset_names, preset_rir
 from src.targets import flat_target, harman_target
 
 st.set_page_config(page_title="DDSP Room Correction", layout="wide")
@@ -26,14 +26,14 @@ lang = LANGUAGES[st.sidebar.radio("🌐 Language / 언어", list(LANGUAGES), hor
 st.title(t(lang, "title"))
 st.caption(t(lang, "caption"))
 
-# --- sidebar: input RIR ---
+# --- sidebar: room ---
 st.sidebar.header(t(lang, "input_header"))
-source = st.sidebar.radio(t(lang, "data_label"), ["synthetic", "upload"],
+source = st.sidebar.radio(t(lang, "data_label"), ["example", "upload"],
                           format_func=lambda k: t(lang, k))
-if source == "synthetic":
-    seed = st.sidebar.slider(t(lang, "seed"), 0, 100, 42)
-    rt60 = st.sidebar.slider(t(lang, "rt60"), 0.1, 1.0, 0.4, 0.1)
-    rir, sr = decaying_noise_rir(48000, 0.5, rt60, seed=seed)
+if source == "example":
+    room = st.sidebar.selectbox(t(lang, "room_picker"), preset_names())
+    rir, sr = preset_rir(room)
+    st.sidebar.caption(t(lang, "room_caption"))
 else:
     up = st.sidebar.file_uploader(t(lang, "uploader"), type=["wav"])
     if up is None:
@@ -49,6 +49,9 @@ target_name = st.sidebar.selectbox(t(lang, "target_curve"), ["flat", "Harman"])
 n_filters = st.sidebar.slider(t(lang, "n_filters"), 8, 64, 32, 8)
 methods = st.sidebar.multiselect(
     t(lang, "methods_label"), ["classic", "ddsp", "fir"], default=["classic", "ddsp"]
+)
+music_up = st.sidebar.file_uploader(
+    t(lang, "music_uploader"), type=["wav", "flac", "ogg", "mp3"]
 )
 
 freqs, resp = frequency_response(rir, sr)
@@ -120,7 +123,15 @@ if methods:
     st.subheader(t(lang, "ab_header"))
     m0 = methods[0]
     corr = results[m0][1]
-    dry = pink_noise(int(2.0 * sr), seed=0)
+    if music_up is not None:
+        try:
+            clip, clip_sr = sf.read(io.BytesIO(music_up.read()), dtype="float64")
+            dry = prepare_clip(clip, clip_sr, sr)
+        except Exception:
+            st.warning(t(lang, "music_error"))
+            dry = pink_noise(int(2.0 * sr), seed=0)
+    else:
+        dry = pink_noise(int(2.0 * sr), seed=0)
     uncorrected = sps.fftconvolve(dry, rir)[: len(dry)]
     pre = apply_fir_to_signal(corr, dry) if isinstance(corr, np.ndarray) \
         else apply_eq_to_signal(corr, dry, sr)
