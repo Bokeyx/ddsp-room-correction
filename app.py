@@ -12,6 +12,7 @@ import streamlit as st
 
 from src.analysis import fractional_octave_smooth, frequency_response
 from src.audio import apply_eq_to_signal, apply_fir_to_signal, pink_noise
+from src.export import to_eqapo_config, to_rew_filters, to_fir_wav_bytes, to_csv
 from src.pipeline import correct, smoothed_sigma
 from src.synthetic import decaying_noise_rir
 from src.targets import flat_target, harman_target
@@ -54,10 +55,10 @@ def _correct(resp, target, freqs, sr, method, n_filters):
     return correct(resp, target, freqs, sr, method=method, n_filters=n_filters)
 
 
-colors = {"classic": "tab:green", "ddsp": "tab:red", "fir": "tab:blue"}
+colors = {"classic": "#7FB5B5", "ddsp": "#F6C28B", "fir": "#B5A7E6"}
 
 fig, ax = plt.subplots(figsize=(10, 4))
-ax.semilogx(freqs, fractional_octave_smooth(freqs, resp), color="tab:gray", lw=1.5,
+ax.semilogx(freqs, fractional_octave_smooth(freqs, resp), color="#9AA0A6", lw=1.5,
             label=f"before (σ={before:.2f})")
 results = {}
 with st.spinner("Computing correction... (DDSP takes a few seconds)"):
@@ -81,6 +82,32 @@ for i, m in enumerate(methods):
     sigma = results[m][2]
     cols[i + 1].metric(f"{m} σ", f"{sigma:.2f} dB", f"{100 * (sigma / before - 1):.0f}%",
                        delta_color="inverse")
+
+# --- export the correction ---
+st.subheader("Export correction")
+for m in methods:
+    corrected_db, corr, _ = results[m]
+    st.markdown(f"**{m}**")
+    cdl = st.columns(3)
+    if isinstance(corr, np.ndarray):
+        # FIR: impulse WAV + CSV
+        cdl[0].download_button(
+            "FIR impulse WAV", data=to_fir_wav_bytes(corr, sr),
+            file_name=f"correction_{m}.wav", mime="audio/wav", key=f"wav_{m}")
+        cdl[1].download_button(
+            "CSV", data=to_csv(None, freqs, resp, corrected_db, n_taps=len(corr)),
+            file_name=f"correction_{m}.csv", mime="text/csv", key=f"csv_{m}")
+    else:
+        # peaking filters: EQ APO + REW + CSV
+        cdl[0].download_button(
+            "Equalizer APO", data=to_eqapo_config(corr),
+            file_name=f"correction_{m}_eqapo.txt", mime="text/plain", key=f"apo_{m}")
+        cdl[1].download_button(
+            "REW filters", data=to_rew_filters(corr),
+            file_name=f"correction_{m}_rew.txt", mime="text/plain", key=f"rew_{m}")
+        cdl[2].download_button(
+            "CSV", data=to_csv(corr, freqs, resp, corrected_db),
+            file_name=f"correction_{m}.csv", mime="text/csv", key=f"csv_{m}")
 
 # --- A/B listening for the first selected method ---
 if methods:
