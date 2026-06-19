@@ -7,7 +7,10 @@
 ![status](https://img.shields.io/badge/status-WIP-orange)
 ![python](https://img.shields.io/badge/python-3.12-blue)
 
-> 🚀 **Live demo:** _deploying — see [`DEPLOY.md`](DEPLOY.md) for the one-time setup; the public URL goes here once it's live._
+[![Live demo](https://img.shields.io/badge/live%20demo-room--correction.streamlit.app-7FB5B5)](https://room-correction.streamlit.app/)
+
+> 🚀 **Try it live:** [room-correction.streamlit.app](https://room-correction.streamlit.app/) — upload a room
+> impulse response (or use the synthetic one), correct it, and download the EQ. Setup notes in [`DEPLOY.md`](DEPLOY.md).
 
 > 📖 New to audio DSP terms? → [`docs/understanding.md`](docs/understanding.md) (plain-language explainer)
 

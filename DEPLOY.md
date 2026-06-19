@@ -1,6 +1,8 @@
 # Deploy the demo as a public web app
 
-The Streamlit app (`app.py`) can run as a public URL on **Streamlit Community Cloud** — free, and it
+**Live:** https://room-correction.streamlit.app/
+
+The Streamlit app (`app.py`) runs as a public URL on **Streamlit Community Cloud** — free, and it
 redeploys automatically on every push to `main`. The repo is already set up for it:
 
 - `requirements.txt` — Python deps (includes `streamlit`, `torch`, `soundfile`)
@@ -17,13 +19,9 @@ redeploys automatically on every push to `main`. The repo is already set up for 
    - **Branch:** `main`
    - **Main file path:** `app.py`
 4. Click **Deploy**. The first build takes a few minutes (it installs `torch`).
-5. You get a public URL like `https://ddsp-room-correction.streamlit.app`. Anyone can open it.
+5. You get a public URL (this project's is `https://room-correction.streamlit.app/`). Anyone can open it.
 
 That's it. After this, every `git push` to `main` redeploys the live app automatically — no further steps.
-
-## After you have the URL
-
-Paste it back here and the README "Live demo" badge will be pointed at it.
 
 ## Notes
 
