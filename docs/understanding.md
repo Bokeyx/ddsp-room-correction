@@ -142,7 +142,7 @@ src/         the actual feature code (one file = one job)
   eq_classic.py classic EQ
   eq_ddsp.py    DDSP (ML optimization) ★ the star
   fir.py        FIR
-  audio.py      apply correction to real sound + the demo music clip
+  audio.py      apply correction to real sound + decode uploads (m4a via ffmpeg)
   datasets.py   list MIT IR Survey rooms + load Aachen AIR 48 kHz (.mat) rooms
   evaluation.py before/after σ per room (multi-room & multi-seed studies)
   export.py     correction → Equalizer APO / REW / FIR WAV / CSV files
@@ -151,7 +151,7 @@ src/         the actual feature code (one file = one job)
   charts.py     tidy data for the app's interactive chart
   pipeline.py   one entry point that calls the methods
 scripts/     download_mit_rir.py (fetch the real RIRs, gitignored data)
-tests/       automated checks that the code is correct (123)
+tests/       automated checks that the code is correct (126)
 notebooks/   analysis story + graphs
 app.py       Streamlit web demo
 assets/      generated graphs and audio
