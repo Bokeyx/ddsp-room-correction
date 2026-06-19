@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.audio import apply_eq_to_signal, apply_fir_to_signal, demo_music, pink_noise
+from src.audio import apply_eq_to_signal, apply_fir_to_signal, demo_music, pink_noise, prepare_clip
 from src.analysis import frequency_response
 from src.eq_classic import PeakingFilter, apply_eq_db
 from src.fir import fir_response_db, design_fir_correction
@@ -130,3 +130,28 @@ def test_demo_music_is_broadband():
     high = power[freqs >= 3000].sum() / total
     assert low > 0.02     # real low-end content
     assert high > 0.001   # real high-end content
+
+
+def test_prepare_clip_stereo_to_mono_same_sr():
+    stereo = np.ones((100, 2), dtype=np.float64)
+    out = prepare_clip(stereo, 48000, 48000)
+    assert out.ndim == 1
+    assert len(out) == 100
+
+
+def test_prepare_clip_resamples_up():
+    mono = np.zeros(1000, dtype=np.float64)
+    out = prepare_clip(mono, 24000, 48000)
+    assert len(out) == 2000  # 24k -> 48k doubles the sample count
+
+
+def test_prepare_clip_trims_to_max_seconds():
+    mono = np.zeros(30 * 48000, dtype=np.float64)
+    out = prepare_clip(mono, 48000, 48000, max_seconds=20.0)
+    assert len(out) == 20 * 48000
+
+
+def test_prepare_clip_short_mono_passthrough():
+    mono = np.linspace(-1.0, 1.0, 500)
+    out = prepare_clip(mono, 48000, 48000)
+    assert np.array_equal(out, mono)

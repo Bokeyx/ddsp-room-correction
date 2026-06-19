@@ -6,8 +6,10 @@ A/B listening demo. The peaking biquads reuse `peaking_coeffs` (same source of
 truth as the dB response), so the audio you hear matches the curves you design.
 """
 
+from math import gcd
+
 import numpy as np
-from scipy.signal import sosfilt, tf2sos
+from scipy.signal import resample_poly, sosfilt, tf2sos
 
 from src.eq_classic import peaking_coeffs
 
@@ -30,6 +32,22 @@ def apply_fir_to_signal(taps, signal):
     taps = np.asarray(taps, dtype=np.float64)
     signal = np.asarray(signal, dtype=np.float64)
     return np.convolve(signal, taps, mode="same")
+
+
+def prepare_clip(signal, src_sr, target_sr, max_seconds=20.0):
+    """Make an uploaded clip ready for in-room playback: average to mono if 2-D,
+    resample to ``target_sr`` (when it differs from ``src_sr``), then trim to the
+    first ``max_seconds``. Returns a 1-D float64 ndarray. The length cap protects
+    the deployed app's limited RAM/compute from a long upload.
+    """
+    signal = np.asarray(signal, dtype=np.float64)
+    if signal.ndim > 1:
+        signal = signal.mean(axis=1)
+    src_sr, target_sr = int(src_sr), int(target_sr)
+    if src_sr != target_sr:
+        g = gcd(src_sr, target_sr)
+        signal = resample_poly(signal, target_sr // g, src_sr // g)
+    return signal[: int(max_seconds * target_sr)]
 
 
 def _midi_to_freq(m):
