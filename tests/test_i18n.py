@@ -25,3 +25,9 @@ def test_t_unknown_key_returns_key():
 
 def test_t_unknown_language_falls_back_to_english():
     assert t("xx", "input_header") == STRINGS["en"]["input_header"]
+
+
+def test_export_description_keys_present_both_languages():
+    for key in ("export_intro", "desc_classic", "desc_ddsp", "desc_fir"):
+        assert key in STRINGS["en"], key
+        assert key in STRINGS["ko"], key

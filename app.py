@@ -110,9 +110,11 @@ for i, m in enumerate(methods):
 
 # --- export the correction ---
 st.subheader(t(lang, "export_header"))
+st.caption(t(lang, "export_intro"))
 for m in methods:
     corrected_db, corr, _ = results[m]
     st.markdown(f"**{m}**")
+    st.caption(t(lang, f"desc_{m}"))
     cdl = st.columns(3)
     if isinstance(corr, np.ndarray):
         # FIR: impulse WAV + CSV
