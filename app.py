@@ -4,7 +4,7 @@ Run with:  streamlit run app.py
 """
 import io
 
-import matplotlib.pyplot as plt
+import altair as alt
 import numpy as np
 import scipy.signal as sps
 import soundfile as sf
@@ -12,20 +12,14 @@ import streamlit as st
 
 from src.analysis import fractional_octave_smooth, frequency_response
 from src.audio import apply_eq_to_signal, apply_fir_to_signal, pink_noise, prepare_clip
+from src.charts import response_dataframe
 from src.export import to_eqapo_config, to_rew_filters, to_fir_wav_bytes, to_csv
-from src.fonts import register_korean_font
 from src.i18n import LANGUAGES, t
 from src.pipeline import correct, smoothed_sigma
 from src.rooms import preset_names, preset_rir
 from src.targets import flat_target, harman_target
 
 st.set_page_config(page_title="DDSP Room Correction", layout="wide")
-
-# Korean plot labels need a CJK font; register the bundled one before any figure.
-try:
-    register_korean_font()
-except FileNotFoundError:
-    pass
 
 # --- sidebar: language ---
 lang = LANGUAGES[st.sidebar.radio("🌐 Language / 언어", list(LANGUAGES), horizontal=True)]
@@ -71,25 +65,40 @@ def _correct(resp, target, freqs, sr, method, n_filters):
     return correct(resp, target, freqs, sr, method=method, n_filters=n_filters)
 
 
-colors = {"classic": "#7FB5B5", "ddsp": "#F6C28B", "fir": "#B5A7E6"}
+PALETTE = {"before": "#9AA0A6", "classic": "#7FB5B5", "ddsp": "#F6C28B", "fir": "#B5A7E6"}
 
-fig, ax = plt.subplots(figsize=(10, 4))
-ax.semilogx(freqs, fractional_octave_smooth(freqs, resp), color="#9AA0A6", lw=1.5,
-            label=f"{t(lang, 'before')} (σ={before:.2f})")
+before_label = f"{t(lang, 'before')} (σ={before:.2f})"
+series = {before_label: fractional_octave_smooth(freqs, resp)}
+domain, scheme = [before_label], [PALETTE["before"]]
 results = {}
 with st.spinner(t(lang, "spinner")):
     for m in methods:
         corrected_db, corr = _correct(resp, target, freqs, sr, m, n_filters)
         sigma = smoothed_sigma(corrected_db, freqs)
         results[m] = (corrected_db, corr, sigma)
-        ax.semilogx(freqs, fractional_octave_smooth(freqs, corrected_db), color=colors[m],
-                    lw=1.8, label=f"{m} (σ={sigma:.2f})")
-ax.semilogx(freqs, target, "k--", lw=1, alpha=0.6, label=f"{target_name} {t(lang, 'target_suffix')}")
-ax.set(xlim=(20, 20000), xlabel="frequency [Hz]", ylabel="magnitude [dB]",
-       title=t(lang, "plot_title"))
-ax.legend()
-ax.grid(alpha=0.3)
-st.pyplot(fig)
+        label = f"{m} (σ={sigma:.2f})"
+        series[label] = fractional_octave_smooth(freqs, corrected_db)
+        domain.append(label)
+        scheme.append(PALETTE[m])
+
+resp_df = response_dataframe(freqs, series)
+target_df = response_dataframe(freqs, {f"{target_name} {t(lang, 'target_suffix')}": target})
+
+x_enc = alt.X("freq_hz:Q", scale=alt.Scale(type="log", domain=[20, 20000]),
+              title=t(lang, "freq_axis"))
+lines = alt.Chart(resp_df).mark_line().encode(
+    x=x_enc,
+    y=alt.Y("magnitude_db:Q", title=t(lang, "mag_axis")),
+    color=alt.Color("series:N", scale=alt.Scale(domain=domain, range=scheme), title=None),
+    tooltip=[alt.Tooltip("series:N", title="series"),
+             alt.Tooltip("freq_hz:Q", title="Hz", format=".0f"),
+             alt.Tooltip("magnitude_db:Q", title="dB", format=".1f")],
+)
+target_line = alt.Chart(target_df).mark_line(strokeDash=[6, 4], color="#9AA0A6").encode(
+    x=x_enc, y="magnitude_db:Q",
+)
+chart = (target_line + lines).properties(title=t(lang, "plot_title"), height=360).interactive()
+st.altair_chart(chart, use_container_width=True)
 
 # --- metrics ---
 cols = st.columns(len(methods) + 1)
