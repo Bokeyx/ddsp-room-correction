@@ -148,9 +148,10 @@ src/         the actual feature code (one file = one job)
   export.py     correction → Equalizer APO / REW / FIR WAV / CSV files
   i18n.py       EN/KO UI strings for the app's language toggle
   rooms.py      friendly preset rooms for the app (simulated)
+  fonts.py      register the bundled Korean font for matplotlib
   pipeline.py   one entry point that calls the methods
 scripts/     download_mit_rir.py (fetch the real RIRs, gitignored data)
-tests/       automated checks that the code is correct (119)
+tests/       automated checks that the code is correct (121)
 notebooks/   analysis story + graphs
 app.py       Streamlit web demo
 assets/      generated graphs and audio
