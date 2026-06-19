@@ -140,9 +140,10 @@ src/         the actual feature code (one file = one job)
   datasets.py   list MIT IR Survey rooms + load Aachen AIR 48 kHz (.mat) rooms
   evaluation.py before/after σ per room (multi-room & multi-seed studies)
   export.py     correction → Equalizer APO / REW / FIR WAV / CSV files
+  i18n.py       EN/KO UI strings for the app's language toggle
   pipeline.py   one entry point that calls the methods
 scripts/     download_mit_rir.py (fetch the real RIRs, gitignored data)
-tests/       automated checks that the code is correct (101)
+tests/       automated checks that the code is correct (106)
 notebooks/   analysis story + graphs
 app.py       Streamlit web demo
 assets/      generated graphs and audio

@@ -167,6 +167,7 @@ ddsp-room-correction/
 │   ├── datasets.py    # MIT IR Survey listing + Aachen AIR (.mat) loader
 │   ├── evaluation.py  # per-RIR before/after σ for the multi-room & multi-seed studies
 │   ├── export.py      # correction → Equalizer APO / REW / FIR WAV / CSV
+│   ├── i18n.py        # EN/KO UI string tables for the app
 │   └── pipeline.py    # unified interface over the three methods
 ├── scripts/
 │   └── download_mit_rir.py   # fetch the MIT IR Survey into data/public/ (gitignored)
@@ -201,7 +202,7 @@ Regenerate them anytime with `python scripts/generate_examples.py`.
 - [x] **M6a** analysis notebook + before/after, comparison, nf-sweep plots
 - [x] **M6b** FIR correction filter (linear-phase, frequency sampling) — completes the 3-way comparison
 - [x] **M6c** A/B listening audio (before/after + spectrogram, inline playback in the notebook)
-- [x] **M7** Streamlit interactive demo (`app.py`) — pastel theme + export the correction to Equalizer APO / REW / FIR WAV / CSV
+- [x] **M7** Streamlit interactive demo (`app.py`) — pastel theme + EN/KO toggle + export the correction to Equalizer APO / REW / FIR WAV / CSV, deployed live
 - [x] **M5b** validation on a public RIR dataset (MIT IR Survey, 20 real rooms) — DDSP flattest & most consistent
 - [x] **M5c** full-rate validation (Aachen AIR, 48 kHz) — corrects the 8–20 kHz top octave the 16 kHz mirror could not reach
 - [ ] **M8** (bonus) apply to self-measured RIRs
@@ -216,7 +217,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements-dev.txt
-pytest                       # run tests (101)
+pytest                       # run tests (106)
 streamlit run app.py         # interactive demo (correct a RIR, then export the filters)
 jupyter notebook notebooks/room_correction.ipynb   # analysis notebook
 
