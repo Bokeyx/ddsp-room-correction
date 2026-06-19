@@ -13,12 +13,19 @@ import streamlit as st
 from src.analysis import fractional_octave_smooth, frequency_response
 from src.audio import apply_eq_to_signal, apply_fir_to_signal, pink_noise, prepare_clip
 from src.export import to_eqapo_config, to_rew_filters, to_fir_wav_bytes, to_csv
+from src.fonts import register_korean_font
 from src.i18n import LANGUAGES, t
 from src.pipeline import correct, smoothed_sigma
 from src.rooms import preset_names, preset_rir
 from src.targets import flat_target, harman_target
 
 st.set_page_config(page_title="DDSP Room Correction", layout="wide")
+
+# Korean plot labels need a CJK font; register the bundled one before any figure.
+try:
+    register_korean_font()
+except FileNotFoundError:
+    pass
 
 # --- sidebar: language ---
 lang = LANGUAGES[st.sidebar.radio("🌐 Language / 언어", list(LANGUAGES), horizontal=True)]
