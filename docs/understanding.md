@@ -151,7 +151,7 @@ src/         the actual feature code (one file = one job)
   charts.py     tidy data for the app's interactive chart
   pipeline.py   one entry point that calls the methods
 scripts/     download_mit_rir.py (fetch the real RIRs, gitignored data)
-tests/       automated checks that the code is correct (126)
+tests/       automated checks that the code is correct (127)
 notebooks/   analysis story + graphs
 app.py       Streamlit web demo
 assets/      generated graphs and audio
