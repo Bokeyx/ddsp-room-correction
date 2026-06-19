@@ -1,6 +1,10 @@
-import numpy as np
+import io
 
-from src.audio import apply_eq_to_signal, apply_fir_to_signal, demo_music, pink_noise, prepare_clip
+import numpy as np
+import pytest
+
+from src.audio import (apply_eq_to_signal, apply_fir_to_signal, decode_audio,
+                       demo_music, pink_noise, prepare_clip)
 from src.analysis import frequency_response
 from src.eq_classic import PeakingFilter, apply_eq_db
 from src.fir import fir_response_db, design_fir_correction
@@ -155,3 +159,41 @@ def test_prepare_clip_short_mono_passthrough():
     mono = np.linspace(-1.0, 1.0, 500)
     out = prepare_clip(mono, 48000, 48000)
     assert np.array_equal(out, mono)
+
+
+def test_decode_audio_wav_via_soundfile():
+    import soundfile as sf
+    buf = io.BytesIO()
+    sf.write(buf, np.linspace(-0.5, 0.5, 1000), 44100, format="WAV")
+    sig, sr = decode_audio(buf.getvalue())
+    assert sr == 44100
+    assert len(sig) == 1000
+    assert np.all(np.isfinite(sig))
+
+
+def test_decode_audio_garbage_raises():
+    with pytest.raises(ValueError):
+        decode_audio(b"this is not audio at all")
+
+
+def test_decode_audio_m4a_via_ffmpeg(tmp_path):
+    imageio_ffmpeg = pytest.importorskip("imageio_ffmpeg")
+    import subprocess
+    import soundfile as sf
+    try:
+        exe = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        pytest.skip("no ffmpeg binary available")
+
+    wav = tmp_path / "tone.wav"
+    sr = 44100
+    t = np.linspace(0, 0.5, int(0.5 * sr), endpoint=False)
+    sf.write(str(wav), 0.2 * np.sin(2 * np.pi * 440 * t), sr, format="WAV")
+    m4a = tmp_path / "tone.m4a"
+    proc = subprocess.run([exe, "-y", "-i", str(wav), str(m4a)], capture_output=True)
+    if proc.returncode != 0 or not m4a.exists():
+        pytest.skip("ffmpeg could not produce m4a in this environment")
+
+    sig, out_sr = decode_audio(m4a.read_bytes())
+    assert len(sig) > 0
+    assert out_sr > 0

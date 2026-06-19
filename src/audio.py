@@ -6,9 +6,14 @@ A/B listening demo. The peaking biquads reuse `peaking_coeffs` (same source of
 truth as the dB response), so the audio you hear matches the curves you design.
 """
 
+import io
+import os
+import subprocess
+import tempfile
 from math import gcd
 
 import numpy as np
+import soundfile as sf
 from scipy.signal import resample_poly, sosfilt, tf2sos
 
 from src.eq_classic import peaking_coeffs
@@ -48,6 +53,44 @@ def prepare_clip(signal, src_sr, target_sr, max_seconds=20.0):
         g = gcd(src_sr, target_sr)
         signal = resample_poly(signal, target_sr // g, src_sr // g)
     return signal[: int(max_seconds * target_sr)]
+
+
+def decode_audio(raw_bytes):
+    """Decode uploaded audio bytes to ``(signal, sr)``.
+
+    Tries soundfile first (WAV/FLAC/OGG/MP3 via libsndfile). On failure, writes
+    the bytes to a temp file and transcodes to WAV with the bundled ffmpeg
+    (imageio-ffmpeg) -- this covers m4a/aac/opus etc. that libsndfile can't read.
+    Raises ValueError if neither path can decode. Mono/resample/trim are left to
+    prepare_clip.
+    """
+    try:
+        return sf.read(io.BytesIO(raw_bytes), dtype="float64")
+    except Exception:
+        pass  # fall through to the ffmpeg path
+
+    try:
+        import imageio_ffmpeg
+        exe = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception as exc:
+        raise ValueError("could not decode audio (no ffmpeg available)") from exc
+
+    fin = tempfile.NamedTemporaryFile(delete=False)
+    fout = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+    fout.close()
+    try:
+        fin.write(raw_bytes)
+        fin.close()
+        proc = subprocess.run([exe, "-y", "-i", fin.name, fout.name], capture_output=True)
+        if proc.returncode != 0:
+            raise ValueError("could not decode audio (ffmpeg failed)")
+        return sf.read(fout.name, dtype="float64")
+    finally:
+        for path in (fin.name, fout.name):
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
 
 
 def _midi_to_freq(m):
