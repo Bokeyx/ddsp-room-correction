@@ -11,7 +11,7 @@ import soundfile as sf
 import streamlit as st
 
 from src.analysis import fractional_octave_smooth, frequency_response
-from src.audio import apply_eq_to_signal, apply_fir_to_signal, pink_noise, prepare_clip
+from src.audio import apply_eq_to_signal, apply_fir_to_signal, pink_noise, prepare_clip, decode_audio
 from src.charts import response_dataframe
 from src.export import to_eqapo_config, to_rew_filters, to_fir_wav_bytes, to_csv
 from src.i18n import LANGUAGES, t
@@ -52,7 +52,7 @@ methods = st.sidebar.multiselect(
     t(lang, "methods_label"), ["classic", "ddsp", "fir"], default=["classic", "ddsp"]
 )
 music_up = st.sidebar.file_uploader(
-    t(lang, "music_uploader"), type=["wav", "flac", "ogg", "mp3"]
+    t(lang, "music_uploader"), type=["wav", "flac", "ogg", "mp3", "m4a", "aac", "opus"]
 )
 
 freqs, resp = frequency_response(rir, sr)
@@ -143,7 +143,7 @@ if methods:
     corr = results[m0][1]
     if music_up is not None:
         try:
-            clip, clip_sr = sf.read(io.BytesIO(music_up.read()), dtype="float64")
+            clip, clip_sr = decode_audio(music_up.read())
             dry = prepare_clip(clip, clip_sr, sr)
         except Exception:
             st.warning(t(lang, "music_error"))
