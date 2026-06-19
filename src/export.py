@@ -46,3 +46,27 @@ def to_fir_wav_bytes(taps, sr):
     buf = io.BytesIO()
     sf.write(buf, taps, int(sr), format="WAV", subtype="FLOAT")
     return buf.getvalue()
+
+
+def to_csv(filters, freqs_hz, before_db, after_db, n_taps=None):
+    """Filter parameters (commented preamble) + per-frequency before/after table.
+
+    ``filters=None`` is the FIR case: the preamble notes the tap count
+    (``n_taps``) instead of per-filter lines.
+    """
+    freqs_hz = np.asarray(freqs_hz, dtype=np.float64)
+    before_db = np.asarray(before_db, dtype=np.float64)
+    after_db = np.asarray(after_db, dtype=np.float64)
+
+    lines = ["# DDSP Room Correction - export"]
+    if filters is None:
+        lines.append(f"# fir filter, {int(n_taps)} taps")
+    else:
+        lines.append("# filter,freq_hz,gain_db,q")
+        for i, f in enumerate(filters, start=1):
+            lines.append(f"# {i},{round(f.freq_hz)},{f.gain_db:.2f},{f.q:.3f}")
+
+    lines.append("freq_hz,before_db,after_db")
+    for fr, b, a in zip(freqs_hz, before_db, after_db):
+        lines.append(f"{fr},{b},{a}")
+    return "\n".join(lines) + "\n"
