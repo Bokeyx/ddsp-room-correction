@@ -170,6 +170,22 @@ ddsp-room-correction/
 └── app.py             # Streamlit demo
 ```
 
+## See it without running anything
+
+The app's pastel before/after plot and real export files are committed, so you can inspect the output
+straight from GitHub — no Python, no Streamlit:
+
+![App preview](assets/13_app_preview.png)
+
+- `assets/exports/correction_ddsp_eqapo.txt` — Equalizer APO config (paste into `config.txt`)
+- `assets/exports/correction_ddsp_rew.txt` — REW parametric filter list
+- `assets/exports/correction_ddsp.csv` — filter params + per-frequency before/after (peaking preamble)
+- `assets/exports/correction_fir.csv` — same table, FIR-tap preamble
+- `assets/exports/correction_fir.wav` — FIR impulse for convolution engines (just play it)
+- `correction_classic_*` — the classic-EQ equivalents
+
+Regenerate them anytime with `python scripts/generate_examples.py`.
+
 ## Roadmap
 
 - [x] **M1** synthetic RIR + WAV I/O + FFT frequency response
