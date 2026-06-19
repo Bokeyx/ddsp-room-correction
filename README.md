@@ -7,6 +7,8 @@
 ![status](https://img.shields.io/badge/status-WIP-orange)
 ![python](https://img.shields.io/badge/python-3.12-blue)
 
+> 🚀 **Live demo:** _deploying — see [`DEPLOY.md`](DEPLOY.md) for the one-time setup; the public URL goes here once it's live._
+
 > 📖 New to audio DSP terms? → [`docs/understanding.md`](docs/understanding.md) (plain-language explainer)
 
 ## TL;DR
