@@ -25,3 +25,22 @@ def win_counts(rows, methods):
         if len(winners) == 1:
             counts[winners[0]] += 1
     return counts
+
+
+def paired_sigma_test(rows, method_a, method_b):
+    """Paired Wilcoxon signed-rank test on the per-row differences
+    (sigma_a - sigma_b). ``median_diff`` < 0 means ``method_a`` is flatter on
+    average. Raises ValueError on empty ``rows``. If every paired difference is
+    zero, returns pvalue 1.0 (scipy would otherwise raise on degenerate input).
+    """
+    if not rows:
+        raise ValueError("rows is empty; need at least one paired observation")
+    a = np.array([row[method_a] for row in rows], dtype=float)
+    b = np.array([row[method_b] for row in rows], dtype=float)
+    diff = a - b
+    median_diff = float(np.median(diff))
+    if np.allclose(diff, 0.0):
+        return {"n": len(rows), "median_diff": median_diff, "statistic": 0.0, "pvalue": 1.0}
+    stat, pvalue = wilcoxon(a, b)
+    return {"n": len(rows), "median_diff": median_diff,
+            "statistic": float(stat), "pvalue": float(pvalue)}
