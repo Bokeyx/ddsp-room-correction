@@ -1,6 +1,9 @@
-numpy
-scipy
-soundfile
-matplotlib
-torch
-streamlit
+# Pinned to the versions Streamlit Cloud resolved and ran successfully
+# (Python 3.14). Pinning keeps deploys reproducible and forces a clean
+# environment rebuild (which restarts the process and clears module caches).
+numpy==2.4.6
+scipy==1.17.1
+soundfile==0.14.0
+matplotlib==3.11.0
+torch==2.12.1
+streamlit==1.58.0
