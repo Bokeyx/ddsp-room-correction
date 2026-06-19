@@ -102,6 +102,9 @@ DDSP:     0.23   ← flattest (66% better) ★
 - **Not cherry-picked.** Beyond averages, DDSP is the flattest in **14 of 20** real rooms (FIR 6,
   classic 0), and its edge over the classic EQ is statistically significant (paired Wilcoxon signed-rank,
   **p ≈ 8.2e-05**) — the improvement is real, not a lucky room.
+- **Anyone can try it.** The live app no longer needs a measurement file: pick a named example room
+  (simulated) and play **your own music** to hear the before/after through the room — no jargon, no upload
+  required. Power users can still upload a real measured RIR.
 
 ---
 
@@ -144,9 +147,10 @@ src/         the actual feature code (one file = one job)
   evaluation.py before/after σ per room (multi-room & multi-seed studies)
   export.py     correction → Equalizer APO / REW / FIR WAV / CSV files
   i18n.py       EN/KO UI strings for the app's language toggle
+  rooms.py      friendly preset rooms for the app (simulated)
   pipeline.py   one entry point that calls the methods
 scripts/     download_mit_rir.py (fetch the real RIRs, gitignored data)
-tests/       automated checks that the code is correct (106)
+tests/       automated checks that the code is correct (119)
 notebooks/   analysis story + graphs
 app.py       Streamlit web demo
 assets/      generated graphs and audio

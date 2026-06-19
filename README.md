@@ -9,8 +9,9 @@
 
 [![Live demo](https://img.shields.io/badge/live%20demo-room--correction.streamlit.app-7FB5B5)](https://room-correction.streamlit.app/)
 
-> 🚀 **Try it live:** [room-correction.streamlit.app](https://room-correction.streamlit.app/) — upload a room
-> impulse response (or use the synthetic one), correct it, and download the EQ. Setup notes in [`DEPLOY.md`](DEPLOY.md).
+> 🚀 **Try it live:** [room-correction.streamlit.app](https://room-correction.streamlit.app/) — pick an
+> example room, play your own music to hear the before/after, and download the EQ. (Advanced: upload your
+> own measured RIR.) Setup notes in [`DEPLOY.md`](DEPLOY.md).
 
 > 📖 New to audio DSP terms? → [`docs/understanding.md`](docs/understanding.md) (plain-language explainer)
 
@@ -168,7 +169,8 @@ ddsp-room-correction/
 │   ├── eq_classic.py  # classic EQ (baseline)
 │   ├── eq_ddsp.py     # differentiable optimization EQ (headline)
 │   ├── fir.py         # FIR filter (comparison)
-│   ├── audio.py       # apply correction to real audio
+│   ├── rooms.py       # friendly preset rooms for the app (synthetic RIRs)
+│   ├── audio.py       # apply correction to real audio (+ prepare uploaded clips)
 │   ├── metrics.py     # σ / RMSE evaluation
 │   ├── datasets.py    # MIT IR Survey listing + Aachen AIR (.mat) loader
 │   ├── evaluation.py  # per-RIR before/after σ for the multi-room & multi-seed studies
@@ -224,7 +226,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements-dev.txt
-pytest                       # run tests (106)
+pytest                       # run tests (119)
 streamlit run app.py         # interactive demo (correct a RIR, then export the filters)
 jupyter notebook notebooks/room_correction.ipynb   # analysis notebook
 
